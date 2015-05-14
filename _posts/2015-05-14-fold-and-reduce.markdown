@@ -3,6 +3,7 @@ layout: post
 title:  "Fold, aggregate, reduce и scan - II"
 date:   2015-05-14 23:30:00
 categories: scala
+image: http://i.imgur.com/fI4DKrH.png
 ---
 
 <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
