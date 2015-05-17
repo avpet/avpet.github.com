@@ -6,7 +6,13 @@ categories: scala
 image: http://i.imgur.com/9EuOOe1.png
 ---
 
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<style>
+/* To center images */
+.center {
+    text-align: center;
+}
+</style>
+
 
 ### Параллельные коллекции и свертка
 
@@ -112,7 +118,7 @@ def aggregate [B] (z: B)(seqop: (B, A) ⇒ B, combop: (B, B) ⇒ B): B
 
 Здесь `A` - тип элементов коллекции, `B` - тип аккумулятора и результата. Допустим, у нас есть четыре элемента. Тогда возможен следующий сценарий работы `aggregate`:
 
-
+{: .center}
 ![LiJdm4J.png](http://i.imgur.com/LiJdm4J.png)
 
 
