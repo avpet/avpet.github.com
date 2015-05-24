@@ -3,7 +3,7 @@ layout: post
 title:  "Потоки vs акторы - I"
 date:   2015-05-24 10:30:00
 categories: scala
-image: http://i.imgur.com/2b8zVSb.png
+image: http://i.imgur.com/EFaa8Mz.png
 ---
 
 <style>
