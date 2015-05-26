@@ -72,7 +72,7 @@ override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries =
 
 Akka довольно легко конфигурируется для работы в распределенном варианте, при этом в коде мало что меняется, все взаимодействия по-прежнему остаются все той же передачей сообщений. Т.е. прозрачность в этом отношении такова, что мы используем один и тот же API, будь это система акторов внутри одной JVM  или кластер из тысячи машин. Все решает конфигурация, и еще нужно добавить один дополнительный jar - `akka-remote`. Как минимум, в файле `application.conf` мы должны указать нечто вроде:
 
-{% highlight json %}
+{% highlight javascript %}
 akka {
   actor {
     provider = "akka.remote.RemoteActorRefProvider"
