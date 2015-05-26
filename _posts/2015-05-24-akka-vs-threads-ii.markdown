@@ -56,7 +56,7 @@ override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries =
 } 
 {% endhighlight %}
 
-Дочерний актор и его собственный дочерний актор тоже переопределяет `supervisorStrategy`, но делает по-другому: 
+Дочерний актор и его собственный дочерний актор тоже переопределяет `supervisorStrategy`, но делает это по-другому: 
 
 {% highlight scala %}
 override val supervisorStrategy = OneForOneStrategy(maxNrOfRetries = 
