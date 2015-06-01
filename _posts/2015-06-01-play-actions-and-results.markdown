@@ -81,7 +81,7 @@ case class Result(headers:ResponseHeaders, body:Enumerator[Array[Byte]])
 case class Result[E](headers:ResponseHeaders, body:Enumerator[E])(implicit writeable:Writeable[E])
 {% endhighlight %}
 
-На самом деле, правда, есть метода-фабрика в классе `Status` (`Status` и является `Result`ом), который создает результат.
+На самом деле, правда, `writeable` передается не в конструкторе `Result`а, а, например, в методе-фабрика в классе `Status`, который тоже является `Result`ом.
 
 {% highlight scala %}
 def apply[C](content: C)(implicit writeable: Writeable[C]): Result
