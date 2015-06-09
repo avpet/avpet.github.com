@@ -68,7 +68,7 @@ reactive-stock-src: https://github.com/typesafehub/reactive-stocks/blob/master/
 
 * ["Canary deployments"](http://martinfowler.com/bliki/CanaryRelease.html) 
 * ["Rolling updates"](http://aws.amazon.com/about-aws/whats-new/2013/11/11/aws-elastic-beanstalk-announces-rolling-updates/)
-* ["Различные приемы для миграции схемы БД в условиях непрерывного развертывания"] (http://www.grahambrooks.com/continuous%20delivery/continuous%20deployment/zero%20down-time/2013/08/29/zero-down-time-relational-databases.html)
+* ["Различные приемы для миграции схемы БД в условиях непрерывного развертывания"](http://www.grahambrooks.com/continuous%20delivery/continuous%20deployment/zero%20down-time/2013/08/29/zero-down-time-relational-databases.html)
 
 В качестве инструмента мониторинга может быть использована [Typesafe Console](http://resources.typesafe.com/docs/console/manual/overview.html) - которая мониторить события в реактивном приложении, написанном с использованием Play и Akka. Также,  мониторинг для приложений, написанных  с использованием Scala/Akka/Play, поддерживается в [New Relic - с использованием специального агента](https://docs.newrelic.com/docs/agents/java-agent/installation/java-agent-manual-installation), [Takipi](http://www.typesafe.com/blog/Introducing-Takipi-God-Mode-in-Production-Scala-Code) и  [AppDynamics](https://blog.appdynamics.com/java/appdynamics-pro-supports-scala-and-the-typesafe-reactive-platform-with-play2akka/)
 
