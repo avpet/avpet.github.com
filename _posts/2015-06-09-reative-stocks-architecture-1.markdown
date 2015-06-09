@@ -70,7 +70,7 @@ reactive-stock-src: https://github.com/typesafehub/reactive-stocks/blob/master/
 * ["Rolling updates"](http://aws.amazon.com/about-aws/whats-new/2013/11/11/aws-elastic-beanstalk-announces-rolling-updates/)
 * ["Различные приемы для миграции схемы БД в условиях непрерывного развертывания"](http://www.grahambrooks.com/continuous%20delivery/continuous%20deployment/zero%20down-time/2013/08/29/zero-down-time-relational-databases.html)
 
-В качестве инструмента мониторинга может быть использована [Typesafe Console](http://resources.typesafe.com/docs/console/manual/overview.html) - которая мониторить события в реактивном приложении, написанном с использованием Play и Akka. Также,  мониторинг для приложений, написанных  с использованием Scala/Akka/Play, поддерживается в [New Relic - с использованием специального агента](https://docs.newrelic.com/docs/agents/java-agent/installation/java-agent-manual-installation), [Takipi](http://www.typesafe.com/blog/Introducing-Takipi-God-Mode-in-Production-Scala-Code) и  [AppDynamics](https://blog.appdynamics.com/java/appdynamics-pro-supports-scala-and-the-typesafe-reactive-platform-with-play2akka/)
+В качестве инструмента мониторинга может быть использована [Typesafe Console](http://resources.typesafe.com/docs/console/manual/overview.html) - которая мониторит события в реактивном приложении, написанном с использованием Play и Akka. Также,  мониторинг для приложений, написанных  с использованием Scala/Akka/Play, поддерживается в [New Relic - с использованием специального агента](https://docs.newrelic.com/docs/agents/java-agent/installation/java-agent-manual-installation). Рожжерживается он в [Takipi](http://www.typesafe.com/blog/Introducing-Takipi-God-Mode-in-Production-Scala-Code) и [AppDynamics](https://blog.appdynamics.com/java/appdynamics-pro-supports-scala-and-the-typesafe-reactive-platform-with-play2akka/)
 
 #### [Reactive Stocks](https://github.com/typesafehub/reactive-stocks) ####
 
@@ -79,7 +79,7 @@ reactive-stock-src: https://github.com/typesafehub/reactive-stocks/blob/master/
 {: .center}
 ![KXWxs2u.png](http://i.imgur.com/KXWxs2u.png)
 
-Приложение *Reactive Stocks* написано на Scala и Java с использованием Play и Akka с целью показать на сравнительно простом примере реактивный подход. в частности, *Reactive Composition* и *Reactive Push*.
+Приложение *Reactive Stocks* написано на Scala и Java с использованием Play и Akka с целью показать на сравнительно простом примере реактивный подход. В частности, *Reactive Composition* и *Reactive Push*.
 
 Идея приложения довольно проста  - на каждой открытой странице оно показывает набор графиков котировок, которые "проталкиваются" от сервера в клиент с помощью WebSocket. В данном случае значения фейковые, генерируемые случайным образом. *Reactive Stocks* написано с использованием *Play* и *Akka*,  причем бэкенд частично написан на Java, а не только на Scala -  с целью показать, насколько оба языка просто сосуществуют в рамках одного приложения. Фронтенд использует [CoffeeScript](http://coffeescript.org/) в качестве клиентского языка, и [WebSockets](https://developer.mozilla.org/en/docs/WebSockets) в для push-запросов.
 
