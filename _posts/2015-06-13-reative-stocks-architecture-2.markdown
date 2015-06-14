@@ -57,15 +57,15 @@ populateStockHistory = (message) ->
 ....
 {% endhighlight %}
 
-Как уже отмечалось, есть две функции отрисовки, и обе отрабатывают в ответ на JSON-сообщения из входного (с точки зрения клиента) канала `WebSocket`'а:
+Как уже отмечалось, есть две функции, обновляющие график, и обе отрабатывают в ответ на JSON-сообщения из входного (с точки зрения клиента) канала `WebSocket`'а:
 
-* `populateStockHistory` - первоначальная, в ответ на JSON-сообщение `"stockhistory"`;
-* `updateStockChart` - вызывается каждый раз в ответ на JSON-сообщение `"stockupdate"`; 
+* [`populateStockHistory`](https://github.com/typesafehub/reactive-stocks/blob/master/app/assets/javascripts/index.coffee#L7) - первоначальная, в ответ на JSON-сообщение `"stockhistory"`;
+* [`updateStockChart`](https://github.com/typesafehub/reactive-stocks/blob/master/app/assets/javascripts/index.coffee#L9) - вызывается каждый раз в ответ на JSON-сообщение `"stockupdate"`; 
 
 Для отрисовки используется библиотека [Flot](http://www.flotcharts.org/). Использовать ее очень просто - фактически, все, что нужно сделать - это вызвать функцию `plot`:
 
 {% highlight coffee %}
-$("#placeholder").plot(data, options).data("plot");
+$("#placeholder").plot(data, options)
 {% endhighlight %}
 
 где `placeholder` - это существующий DOM элемент, например, *<div>*, `data` - или [массив массивов (пар) координат, или спец. объекты](https://github.com/flot/flot/blob/master/API.md#data-format), ну и `options` - очевидно, что это такое - [объект со всякими настройками](https://github.com/flot/flot/blob/master/API.md#plot-options). 
@@ -99,7 +99,7 @@ container.addClass("flipped")
 }
 {% endhighlight %}
 
-Затем [делается ajax-запрос]({{page.reactive-stock-src}}app/assets/javascripts/index.coffee#L77) к эндпойнту `/sentiment/<SYMBOL>`, где `<SYMBOL>`, как уже понятно - символ котировки (которой хранится в атрибуте `data-content` *<div>*а `flipper` и [соответственно извлекается оттуда]({{page.reactive-stock-src}}app/assets/javascripts/index.coffee#L77)). И при успехе запроса, анализируется в JSON-ответе [анализируется поле `label`]({{page.reactive-stock-src}}app/assets/javascripts/index.coffee#L83) и в зависимости от возвращаемого значения - `pos`, `neg` или `neutral` - показывается соответствующее ожидание: `buy`, `sell` или `hold` . Для этого в *<div>* `details-holder` [устанавливается соответствующий текст и иконка. картинка]({{page.reactive-stock-src}}app/assets/javascripts/index.coffee#L85))
+Затем [делается ajax-запрос]({{page.reactive-stock-src}}app/assets/javascripts/index.coffee#L77) к эндпойнту `/sentiment/<SYMBOL>`, где `<SYMBOL>`, как уже понятно - символ котировки (которой хранится в атрибуте `data-content` *<div>*а `flipper` и [соответственно извлекается оттуда]({{page.reactive-stock-src}}app/assets/javascripts/index.coffee#L77)). И при успехе запроса, анализируется в JSON-ответе [анализируется поле `label`]({{page.reactive-stock-src}}app/assets/javascripts/index.coffee#L83) и в зависимости от возвращаемого значения - `pos`, `neg` или `neutral` - показывается соответствующее ожидание: `buy`, `sell` или `hold` . Для этого в *<div>* `details-holder` [устанавливается соответствующий текст и иконка]({{page.reactive-stock-src}}app/assets/javascripts/index.coffee#L85), например:
 
 {% highlight coffee %}
 detailsHolder.append($("<h4>").text("The tweets say BUY!"))
@@ -117,7 +117,7 @@ detailsHolder.append($("<img>").attr("src", "/assets/images/buy.png"))
 GET /sentiment/:symbol controllers.StockSentiment.get(symbol)
 {% endhighlight %}
 
-A GET request to `/sentiment/GOOG` will call `get("GOOG")` on the `StockSentiment.scala` controller. Посмотрим на [сигнатуру этого метода]({{page.reactive-stock-src}}app/controllers/StockSentiment.scala#L59):
+Посмотрим на [сигнатуру этого метода]({{page.reactive-stock-src}}app/controllers/StockSentiment.scala#L59):
 
 {% highlight scala %}
 def get(symbol: String): Action[AnyContent] = Action.async {
@@ -130,9 +130,7 @@ def get(symbol: String): Action[AnyContent] = Action.async {
 3. Вычисляется значения "настроения"/"ожидания" для каждого твита
 4. Вычисляются средние значения `neg`, `neutral` и `pos` для по вероятностям из предыдущего шага, и по ним определяется общее "настроение" котировки
 
-Более детально.
-
-Происходит вызов к прокси поиска на Твитере. Фактически это небольшое Scala-приложение [`twitter-search-proxy`](https://github.com/jamesward/twitter-search-proxy), клиент, который делает запросы к Twitter, кэширует их и обрабатывает отказы (которые случаются примерно в 10% случаев). Возвращаемый JSON имеет примерно следующий вид:
+Более детально: происходит вызов к прокси поиска на Твитере. Фактически это небольшое Scala-приложение [`twitter-search-proxy`](https://github.com/jamesward/twitter-search-proxy), клиент, который делает запросы к Twitter, кэширует их и обрабатывает отказы (которые случаются примерно в 10% случаев). В данном случае оно развернуто в облачном сервисе Heroku. [Возвращаемый JSON](twitter-search-proxy.herokuapp.com/search/tweets?q=GOOG) имеет примерно следующий вид:
 
 {% highlight json %}
 {
@@ -181,7 +179,7 @@ else
   "pos"
 {% endhighlight %}
 
-Все эти действия в сумме совершаются неблокирующим и асинхронным образом, т.е. являются реактивными, в том числе и запрос из браузера (поскольку ajax запрос является тоже реактивным). Таким образом, вся цепочка запросов является реактивной, что является *реактивной композицией*.
+Все эти действия в сумме совершаются неблокирующим и асинхронным образом, т.е. являются реактивными, в том числе и запрос из браузера (поскольку ajax-запрос является тоже реактивным). Таким образом, вся цепочка запросов является реактивной, что является *реактивной композицией*:
 
 {% highlight scala %}
 Action.async {
