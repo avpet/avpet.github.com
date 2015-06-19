@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Example Scala.js application</title>
+  <title>Goblins</title>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta property="og:image" content="images/logo.png">
 </head>
 <body style="margin: 0px">
 
@@ -10,9 +11,9 @@
     <canvas style="display: block" id="canvas" width="255" height="255"/>
 </div>
 
-<script type="text/javascript" src="../example-opt.js"></script>
+<script type="text/javascript" src="javascript/goblins-opt.js"></script>
 <script>
-    example.ScalaJSExample().main(document.getElementById('canvas'));
+    com.avpet.goblins.Goblins().main(document.getElementById('canvas'));
 </script>
 </body>
 </html>
