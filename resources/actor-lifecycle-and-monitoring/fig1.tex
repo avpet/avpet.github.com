@@ -1,4 +1,12 @@
-\begin{tikzpicture}[
+%&latex
+\documentclass{article}
+
+\usepackage{tikz}
+\usetikzlibrary{chains}
+
+\begin{document}
+
+\begin{tikzpicture}[node distance=5mm,
 	nonterminal/.style={
 		% The shape:
 		rectangle,
@@ -14,5 +22,17 @@
 		% Font
 		font=\itshape
 		}]
-	\node [nonterminal] {unsigned integer};
+
+	\node (sender) [nonterminal] {Sender};
+	\node (actorref) [nonterminal,right=of sender] {ActorRef};
+	\node (mailbox) [nonterminal,below=of actorref] {Mainbox};
+	\node (dispatcher) [nonterminal,right=of mailbox] {Dispatcher};
+	\node (actor) [nonterminal,above=of dispatcher] {Actor};
+
+	\path (sender) edge[->] (actorref); % simple edges
+
 \end{tikzpicture}
+
+\end{document}
+
+
