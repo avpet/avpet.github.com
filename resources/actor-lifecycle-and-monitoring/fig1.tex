@@ -29,7 +29,10 @@
 	\node (dispatcher) [nonterminal,right=of mailbox] {Dispatcher};
 	\node (actor) [nonterminal,above=of dispatcher] {Actor};
 
-	\path (sender) edge[->] (actorref); % simple edges
+	\path (sender) edge[->] node {tdc} (actorref); % simple edges
+	\path (actorref) edge[->] (mailbox); % simple edges
+	\path (dispatcher) edge[->] (mailbox); % simple edges
+	\path (mailbox) edge[->] (actor); % simple edges
 
 \end{tikzpicture}
 
