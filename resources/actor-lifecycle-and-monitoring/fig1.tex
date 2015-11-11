@@ -6,7 +6,7 @@
 
 \begin{document}
 
-\begin{tikzpicture}[node distance=15mm,
+\begin{tikzpicture}[node distance=20mm,
 	nonterminal/.style={
 		% The shape:
 		rectangle,
@@ -25,12 +25,14 @@
 
 	\node (sender) [nonterminal] {Sender};
 	\node (actorref) [nonterminal,right=of sender] {ActorRef};
-	\node (mailbox) [nonterminal,below=of actorref] {Mainbox};
+	\node (mailbox) [nonterminal,below=of actorref] {Mailbox};
 	\node (dispatcher) [nonterminal,right=of mailbox] {Dispatcher};
 	\node (actor) [nonterminal,above=of dispatcher] {Actor};
 
 	\path[every node/.style={anchor=south,auto=false}] (sender) edge[->] node {send} (actorref);
 	\path[every node/.style={anchor=south,auto=false}] (actorref) edge[->] node {enqueue} (mailbox);
+	\path[every node/.style={anchor=south,auto=false}] (mailbox) edge[->] node {dequeue} (actor);
+	\path[every node/.style={anchor=south,auto=false}] (dispatcher) edge[->] node {schedule} (mailbox);
 	\path (dispatcher) edge[->] (mailbox);
 	\path (mailbox) edge[->] (actor); 
 
