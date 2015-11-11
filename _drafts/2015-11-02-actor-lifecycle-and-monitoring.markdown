@@ -18,8 +18,10 @@ reactive-stock-src: https://github.com/typesafehub/reactive-stocks/blob/master/
 
 #### Анатомия актора ####
 
-Как показано на картинке ниже, актор состоит из нескольких взаимодействующих элементов. `ActorRef` представляет собой логический адрес актора and enables us to asynchronously send messages to the actor in a fire-and-forget manner. The dispatcher – by default there is one per actor system – takes care of enqueuing messages into the mailbox of an actor as well as scheduling the mailbox for dequeuing one or more messages – but only one at a time – to be processed by the actor. Last but not least, the Actor – typically the only API we have to implement – encapsulates state and behavior.
+Как показано на картинке ниже, актор состоит из нескольких взаимодействующих элементов. `ActorRef` представляет собой логический адрес актора и позволяет нам асинхронно посылать сообщения актору, т.е. не дожидаясь отклика. Dispatcher (диспетчер) – по умолчанию обычно есть 1 dispatcher на actor system – отвечает за постановку сообщений в очередь в mailbox'е актора, а также за scheduling извлечения сообщений из mailbox'а – причем только по одному за раз – для их последующей обработки в акторе. И наконец, актор, реализующий трейт Actor (собственно, это весь API, который мы должны реализовать) – инкапсулирует и состояние, и поведение.
 
+{: .center}
+![r5v1To1.png](http://i.imgur.com/r5v1To1.png)
 
 
 
