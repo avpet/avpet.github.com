@@ -23,7 +23,19 @@ reactive-stock-src: https://github.com/typesafehub/reactive-stocks/blob/master/
 {: .center}
 ![r5v1To1.png](http://i.imgur.com/r5v1To1.png)
 
-Как мы увидим позднее, Akka не дает нам прямого доступа к Actor'у и таким образом обеспечивает то, что отправка асинхронных сообщений - единственный способ взаимодействия с актором: невозможно вызвать метод у актора. Также стоит заметить что отсылка сообщения актору и обработка этого сообщения актором - два совершенно разных действия, которые к тому же выполняются в разных потоках  – и разумеется, Akka обеспечивает всю необходимую синхронизацию  целью защиты состояния актора. Следовательно, Akka как бы создает иллюзию однопоточности, т.е. нам не нужно хаботится о всевозможн синхронизации, таких как like volatile or synchronized in our actor code.
+Как мы увидим позднее, Akka не дает нам прямого доступа к Actor'у и таким образом обеспечивает то, что отправка асинхронных сообщений - единственный способ взаимодействия с актором: невозможно вызвать метод у актора. Также стоит заметить что отсылка сообщения актору и обработка этого сообщения актором - два совершенно разных действия, которые к тому же выполняются в разных потоках  – и разумеется, Akka обеспечивает всю необходимую синхронизацию  целью защиты состояния актора. Следовательно, Akka как бы создает иллюзию однопоточности, т.е. нам не нужно заботится о синхронизации доступа к разделяемой памяти.
+
+#### Реализация актора ####
+
+В Akka актор - класс, который реализует трейт `Actor`:
+
+{% highlight scala %}
+class MyActor extends Actor {
+  override def receive = ???
+}
+{% endhighlight %}
+
+Метод `receive` возвращает т.н. the so-called initial behavior of an actor. That’s simply a partial function used by Akka to handle messages sent to the actor. As the behavior is a PartialFunction[Any, Unit], there’s currently no way to define actors that only accept messages of a particular type. Actually there’s already an experimental module called akka-typed which brings back typesafety to Akka, but that’s not yet production-ready. By the way, an actor can change its behavior, which is the reason for calling the return value of the method receive the initial behavior.
 
 UI приложения *Reactive Stocks* фактически состоит из одной страницы и устроен следующим образом. Схематично страница с котировками выглядит так:
 
