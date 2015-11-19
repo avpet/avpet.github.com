@@ -35,7 +35,10 @@ class MyActor extends Actor {
 }
 {% endhighlight %}
 
-Метод `receive` возвращает т.н. the so-called initial behavior of an actor. That’s simply a partial function used by Akka to handle messages sent to the actor. As the behavior is a PartialFunction[Any, Unit], there’s currently no way to define actors that only accept messages of a particular type. Actually there’s already an experimental module called akka-typed which brings back typesafety to Akka, but that’s not yet production-ready. By the way, an actor can change its behavior, which is the reason for calling the return value of the method receive the initial behavior.
+Метод `receive` возвращает т.н. "начальное поведение" актора.   Every time a message is processed, it is matched against the current behavior of the actor. Behavior means a function which defines the actions to be taken in reaction to the message at that point in time, say forward a request if the client is authorized, deny it otherwise. This behavior may change over time, e.g. because different clients obtain authorization over time, or because the actor may go into an “out-of-service” mode and later come back. These changes are achieved by either encoding them in state variables which are read from the behavior logic, or the function itself may be swapped out at runtime, see the become and unbecome operations. However, the initial behavior defined during construction of the actor object is special in the sense that a restart of the actor will reset its behavior to this initial one.
+
+
+In terms of code, this is simply a partial function used by Akka to handle messages sent to the actor. As the behavior is a PartialFunction[Any, Unit], there’s currently no way to define actors that only accept messages of a particular type. Actually there’s already an experimental module called akka-typed which brings back typesafety to Akka, but that’s not yet production-ready. By the way, an actor can change its behavior, which is the reason for calling the return value of the method receive the initial behavior.
 
 UI приложения *Reactive Stocks* фактически состоит из одной страницы и устроен следующим образом. Схематично страница с котировками выглядит так:
 
