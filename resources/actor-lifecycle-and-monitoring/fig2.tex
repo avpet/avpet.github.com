@@ -1,0 +1,43 @@
+%&latex
+\documentclass{article}
+
+\usepackage{tikz}
+\usetikzlibrary{chains}
+
+\begin{document}
+
+\begin{tikzpicture}[node distance=20mm,
+	nonterminal/.style={
+		% The shape:
+		rectangle,
+		% The size:
+		minimum size=6mm,
+		% The border:
+		very thick,
+		draw=red!50!black!50, % 50% red and 50% black,
+		% and that mixed with 50% white
+		% The filling:
+		top color=white, % a shading that is white at the top...
+		bottom color=red!50!black!20, % and something else at the bottom
+		% Font
+		font=\itshape
+		}]
+
+	\node (sender) [nonterminal] {Sender};
+	\node (actorref) [nonterminal,right=of sender] {ActorRef};
+	\node (mailbox) [nonterminal,below=of actorref] {Mailbox};
+	\node (dispatcher) [nonterminal,right=of mailbox] {Dispatcher};
+	\node (actor) [nonterminal,above=of dispatcher] {Actor};
+
+	\path[every node/.style={anchor=south,auto=false}] (sender) edge[->] node {send} (actorref);
+	\path[every node/.style={anchor=south,auto=false}] (actorref) edge[->] node {enqueue} (mailbox);
+	\path[every node/.style={anchor=south,auto=false}] (mailbox) edge[->] node {dequeue} (actor);
+	\path[every node/.style={anchor=south,auto=false}] (dispatcher) edge[->] node {schedule} (mailbox);
+	\path (dispatcher) edge[->] (mailbox);
+	\path (mailbox) edge[->] (actor); 
+
+\end{tikzpicture}
+
+\end{document}
+
+
