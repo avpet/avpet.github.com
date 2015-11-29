@@ -1,43 +1,42 @@
 %&latex
-\documentclass{article}
-
+\documentclass[10pt,landscape,ansibpaper]{article}
+\usepackage[margin=2em]{geometry}
 \usepackage{tikz}
-\usetikzlibrary{chains}
+\usetikzlibrary{trees,arrows}
+\tikzstyle{every node}=[draw=black, thin, minimum height=3em]
 
 \begin{document}
-
-\begin{tikzpicture}[node distance=20mm,
-	nonterminal/.style={
-		% The shape:
-		rectangle,
-		% The size:
-		minimum size=6mm,
-		% The border:
-		very thick,
-		draw=red!50!black!50, % 50% red and 50% black,
-		% and that mixed with 50% white
-		% The filling:
-		top color=white, % a shading that is white at the top...
-		bottom color=red!50!black!20, % and something else at the bottom
-		% Font
-		font=\itshape
-		}]
-
-	\node (sender) [nonterminal] {Sender};
-	\node (actorref) [nonterminal,right=of sender] {ActorRef};
-	\node (mailbox) [nonterminal,below=of actorref] {Mailbox};
-	\node (dispatcher) [nonterminal,right=of mailbox] {Dispatcher};
-	\node (actor) [nonterminal,above=of dispatcher] {Actor};
-
-	\path[every node/.style={anchor=south,auto=false}] (sender) edge[->] node {send} (actorref);
-	\path[every node/.style={anchor=south,auto=false}] (actorref) edge[->] node {enqueue} (mailbox);
-	\path[every node/.style={anchor=south,auto=false}] (mailbox) edge[->] node {dequeue} (actor);
-	\path[every node/.style={anchor=south,auto=false}] (dispatcher) edge[->] node {schedule} (mailbox);
-	\path (dispatcher) edge[->] (mailbox);
-	\path (mailbox) edge[->] (actor); 
-
+\footnotesize
+\begin{tikzpicture}[
+    supervisor/.style={%
+        text centered, text width=6em,
+        text=black
+    },
+    teammate/.style={%
+        text centered, text width=6em,
+        text=black
+    },
+    subordinate/.style={%
+        grow=down,
+        xshift=-3.2em, % Horizontal position of the child node
+        text centered, text width=6em,
+        edge from parent path={(\tikzparentnode.205) |- (\tikzchildnode.west)}
+    },
+    level1/.style ={level distance=4em,anchor=west},
+    level2/.style ={level distance=8em,anchor=west},
+    level3/.style ={level distance=12em,anchor=west},
+    level4/.style ={level distance=16em,anchor=west},
+    level 1/.style={edge from parent fork down,sibling distance=18em,level distance=5em},
+    level 2/.style={edge from parent fork down,sibling distance=18em}
+]
+    \node[anchor=south,supervisor](super){/}[]
+    child{node [teammate] {user} edge from parent[<-]
+        child{node [teammate] {top-1} edge from parent[<-]
+            child[teammate] {node {child-1} edge from parent[<-]}
+            child[teammate] {node {child-2} edge from parent[<-]}}
+        child{node [teammate] {top-2} edge from parent[<-]}
+    }
+    child{node [teammate] {system} edge from parent[<-]};
 \end{tikzpicture}
-
 \end{document}
-
 
