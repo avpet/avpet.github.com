@@ -23,7 +23,14 @@ In order to send a message to an actor you need its address, which is represente
 publishSubscribeActor ! FetchSubscribers("topicName")
 {% endhighlight %}
 
-В классе `ActorRef` есть оператор `!` – pronounced “bang” – operator, which sends the given message to the respective actor. Once the message has been delivered, the operation is completed and the sending code proceeds. That implies that there is no return value (other than Unit), hence messages are indeed sent in a fire-and-forget manner.
+В классе `ActorRef` есть оператор `!` – или *"tell"* – с помощью которого сообщения отправляются соответсвующему актору. Как только сообщение отправлено, операция завершена и вызывающий код продолжает выполнение. Таким образом, здесь нет возвращаемого значения (кроме `Unit`), в этом и заключается асинхронность.
+
+This is the preferred way of sending messages. No blocking waiting for a message. This gives the best concurrency and scalability characteristics.
+
+If invoked from within an Actor, then the sending actor reference will be implicitly passed along with the message and available to the receiving Actor in its sender(): ActorRef member method. The target actor can use this to reply to the original sender, by using sender() ! replyMsg.
+
+If invoked from an instance that is not an Actor the sender will be deadLetters actor reference by default.
+
 
 {: .center}
 ![r5v1To1.png](http://i.imgur.com/r5v1To1.png)
