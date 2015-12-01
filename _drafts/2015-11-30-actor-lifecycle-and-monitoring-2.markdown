@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "Акторы и их жизненнный цикл - I"
-date:   2015-11-29 19:30:00
+title:  "Акторы и их жизненнный цикл - II"
+date:   2015-12-02 00:30:00
 categories: scala
 image: http://i.imgur.com/pzn4gyb.png
 ---
@@ -15,9 +15,9 @@ image: http://i.imgur.com/pzn4gyb.png
 
 #### Коммуникация: асинхронные сообщения  ####
 
-Каждый актор по сути - это состояние и поведение, и коммуникация с акторами построена исключительно на обмене асинхронными сообщениями, которые помещаются в mailbox принимающего актора, и именно способность обрабатывать соощения является его поведением.
+Каждый актор по сути - это состояние и поведение, и коммуникация с акторами построена исключительно на обмене асинхронными сообщениями, которые помещаются в mailbox принимающего актора, и именно способность обрабатывать сообщения является его поведением.
 
-In order to send a message to an actor you need its address, which is represented by its `ActorRef`:
+Для того, чтобы послать сообщение актору, нам нужен его `ActorRef`:
 
 {% highlight scala %}
 publishSubscribeActor ! FetchSubscribers("topicName")
@@ -25,93 +25,26 @@ publishSubscribeActor ! FetchSubscribers("topicName")
 
 В классе `ActorRef` есть оператор `!` – или *"tell"* – с помощью которого сообщения отправляются соответсвующему актору. Как только сообщение отправлено, операция завершена и вызывающий код продолжает выполнение. Таким образом, здесь нет возвращаемого значения (кроме `Unit`), в этом и заключается асинхронность.
 
-This is the preferred way of sending messages. No blocking waiting for a message. This gives the best concurrency and scalability characteristics.
+Этот способ является предпочтительным, поскольку в этом случае отсутсвует блокирование на отправке, что конечно же, лучше, для паралелльности и как следствие - масштабируемости.
 
-If invoked from within an Actor, then the sending actor reference will be implicitly passed along with the message and available to the receiving Actor in its sender(): ActorRef member method. The target actor can use this to reply to the original sender, by using sender() ! replyMsg.
-
-If invoked from an instance that is not an Actor the sender will be deadLetters actor reference by default.
-
-
-{: .center}
-![r5v1To1.png](http://i.imgur.com/r5v1To1.png)
-
-Как мы увидим позднее, Akka не дает нам прямого доступа к Actor'у и таким образом обеспечивает то, что отправка асинхронных сообщений - единственный способ взаимодействия с актором: невозможно вызвать метод у актора. Также стоит заметить что отсылка сообщения актору и обработка этого сообщения актором - два совершенно разных действия, которые к тому же выполняются в разных потоках  – и разумеется, Akka обеспечивает всю необходимую синхронизацию целью защиты состояния актора. Следовательно, Akka как бы создает иллюзию однопоточности, т.е. нам не нужно заботится о синхронизации доступа к разделяемой памяти.
-
-#### Реализация актора ####
-
-В Akka актор - класс, который реализует трейт `Actor`:
+Если этот оператор вызван из другого актора, то имплицитно будет передана ссылка на актор-источник сообщения. Принимающий актор может получить эту ссылку (естественно, не на сам актор, а опять-таки `ActorRef`). Используя эту ссылку, принимающий актор может отправить ответное сообщение
 
 {% highlight scala %}
-class SimplestActor extends Actor {
-  override def receive = Actor.emptyBehavior
+sender() ! replyMsg
+{% endhighlight %}
+
+Если сообщение было отправлено не актором, то `sender` будет по умолчанию содержать ссылку на `deadLetters`.
+
+{% highlight scala %}
+override def receive = {
+  case SubscribeToTopic(topicName) =>
+    // ... process subscription ...
+    sender() ! Subscribed
 }
 {% endhighlight %}
 
-Метод `receive` возвращает т.н. "исходное поведение" актора.  Каждый раз, когда нужно обработать сообщение, для сообщения ищется соотвествующий обработчик в текущем поведении актора. Поведение актора - функция, которая содержит ряд действий, которые нужно совершить в ответ на некоторые сообщения, например, адресовать запрос далее, если авторизация пройдена, или отклонить запрос в другом случае. Данное поведение может со временем измениться - например, клиенты, от которых приходят запросы, постепенно проходят авторизацию, или акторы могут входить в сотояние временной неработоспособности, а позднее опять начать обработку запросов. Эти изменения отражаются в переменных состояния; также сама функция может быть динамически заменена на другую - см. операции [`become`](http://doc.akka.io/api/akka/2.0/akka/actor/ActorContext.html) и [`unbecome`](http://doc.akka.io/api/akka/2.0/akka/actor/ActorContext.html). Однако, исходное поведение, определенное в ходе создания актора, является специфическим в том смысле, что при перезапуске оно будет снова установлено для актора. В примере приведен простейший актор, не обрабатывающий никаких сообщений, т.к. частичная функция`Actor.emptyBehavior` не определена ни для одного значения.
+Принимающий актор обрабатывает сообщение – команду `SubscribeToTopic` – и высылает обратно ответное сообщение `Subscribed`. Итак, вторая версия `PublishSubscribeActor`'а (и теста).
 
-В смысле реализации это просто частично определенная функция, вызываемая Аккой для обработки сообщений. Поскольку поведением является `PartialFunction[Any, Unit]`, по умолчанию невозможно определить актор, который принимает сообщения определеного типа. Существует, правда, модуль [`akka-typed`](http://doc.akka.io/docs/akka/snapshot/scala/typed.html), назначение которого - добавить безопасность типов в Akka, но он является все еще экспериментальным. 
+Сначала - контракт сообщений `PublishSubscribeActor`'а:
 
-#### Системы акторов и создание акторов ####
-
-По выражению автора модели акторов Карла Хьюитта, “один актор не является актором, акторы работают в системе”. В Akka система акторов является совокупностью взаимодействующих акторов, из которых формируется иерархия - т.е. каждый актор  имеет актора-родителя. 
-
-{: .center}
-![r5v1To1.png](http://i.imgur.com/b6tjGCP.png)
-
-Когда мы создаем систему акторов, Akka создает сразу как минимум 3 актора: т.н. *root guardian*, который является корневым актором всей иерархии, а также еще два актора - *user guardian* и *system guardian*. *user guardian* – который часто просто называют *guardian* – является родителем всех акторов верхнего уровня, создаваемых в приложении – т.е. в данном случае "верхний уровень" означает “самый верхний из доступных приложению”.
-
-Чтобы создать систему акторов, нужно вызывать factory-метод объекта ActorSystem:
-
-{% highlight scala %}
-val system = ActorSystem("our-actor-system")
-{% endhighlight %}
-
-И без создания `ActorSystem` мы не сможем создавать акторы - поскольку просто вызов конструктора `Actor` приведет к exception'у. 
-
-{% highlight scala %}
-throw ActorInitializationException(
-  s"You cannot create an instance of [${getClass.getName}] explicitly using the constructor (new). " +
-    "You have to use one of the 'actorOf' factory methods to create a new actor. See the documentation.")
-{% endhighlight %}
-
-В сообщении exception'а все сказано – мы должны использовать factory-метод из *ActorSystem*, который назвается `actorOf`:
-
-{% highlight scala %}
-system.actorOf(Props[PublishSubscribeActor], "publish-subscribe-actor")
-{% endhighlight %}
-
-`actorOf` не возвращает непосредственно экземпляр `Actor`, а экземпляр `ActorRef`, так что клиентский код не имеет прямого доступа к `Actor`, в том числе для того чтобы обеспечить то, что асинхронные сообщения - единственный вариант взаимодействия с актором. Имя актора должно быть уникальным на данном уровне иерархии акторов - или опять-таки будет выброшен exception. Если не указать имя, то `Akka` все равно сгенерирует его автоматически, так что все акторы имеют имя.
-
-Что такое `Props`? Это конфигурационный объект актора. Он параметризуется класcом актора или принимает его на вход (ну или принимает на вход closure, создающий актор, например, вызов конструктора, но этот метод по определенным причинам [не рекомендуется использовать](http://www.cakesolutions.net/teamblogs/understanding-akkas-recommended-practice-for-actor-creation-in-scala)). Рекомендуемой практикой является создание factory-метода, который создает необходимый `Props`в companion object'е актора. 
-
-Приведем пример простейшего актора - `PublishSubscribeActor`, вместе с заготовкой теста для него:
-
-{% highlight scala %}
-object PublishSubscribeActor {
-
-  final val Name = "publish-subscribe-actor"
-
-  def props: Props = Props[PublishSubscribeActor]
-}
-
-class PublishSubscribeActor extends Actor {
-  override def receive = Actor.emptyBehavior
-}
-
-class PublishSubscribeActorSpec extends TestKit(ActorSystem("publish-subscibe-actor-system"))
-with WordSpecLike
-with Matchers
-with BeforeAndAfterAll {
-
-  "A PublishSubscribeActor" in {
-    EventFilter.debug(occurrences = 1, pattern = s"started.*${classOf[PublishSubscribeActor].getName}").intercept {
-      system.actorOf(PublishSubscribeActor.props)
-    }
-  }
-
-  override protected def afterAll() = {
-    system.shutdown()
-  }
-}
-{% endhighlight %}
 
