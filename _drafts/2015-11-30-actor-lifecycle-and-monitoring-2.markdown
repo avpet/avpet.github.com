@@ -47,4 +47,77 @@ override def receive = {
 
 Сначала - контракт сообщений `PublishSubscribeActor`'а:
 
+{% highlight scala %}
+object PublishSubscribeActor { 
+  case class SubscribeToTopic(topicName: String, subscriber: ActorRef)
+  case class Subscribed(subscribe: Subscribe)
+  case class SubscribedAlready(subscribe: Subscribe)
+ 
+  case class GetTopicSubscribers(topic: String)
+  case class Unsubscribe(topic: String, subscriber: ActorRef)
+  case class Unsubscribed(unsubscribe: Unsubscribe)
+  case class NotSubscribed(unsubscribe: Unsubscribe)
+ 
+  case class PublishMessage(topic: String, message: Any)
+  case class MessagePublished(publish: Publish)
+  
+  final val Name = "publish-subscribe-actor"
+ 
+  def props: Props = Props(new PublishSubscribeActor)
+}
+{% endhighlight %}
 
+Next let’s implement the behavior, which has been empty so far:
+
+{% highlight scala %}
+class PubSubMediator extends Actor {
+  import PubSubMediator._
+ 
+  private var subscribers = Map.empty[String, Set[ActorRef]].withDefaultValue(Set.empty)
+ 
+  override def receive = {
+    case publish @ Publish(topic, message) =>
+      subscribers(topic).foreach(_ ! message)
+      sender() ! Published(publish)
+ 
+    case subscribe @ Subscribe(topic, subscriber) if subscribers(topic).contains(subscriber) =>
+      sender() ! AlreadySubscribed(subscribe)
+ 
+    case subscribe @ Subscribe(topic, subscriber) =>
+      subscribers += topic -> (subscribers(topic) + subscriber)
+      sender() ! Subscribed(subscribe)
+ 
+    case unsubscribe @ Unsubscribe(topic, subscriber) if !subscribers(topic).contains(subscriber) =>
+      sender() ! NotSubscribed(unsubscribe)
+ 
+    case unsubscribe @ Unsubscribe(topic, subscriber) =>
+      subscribers += topic -> (subscribers(topic) - subscriber)
+      sender() ! Unsubscribed(unsubscribe)
+ 
+    case GetSubscribers(topic) =>
+      sender() ! subscribers(topic)
+  }
+}
+{% endhighlight %}
+
+As you can see, the behavior handles all commands – e.g. Publish or Subscribe – and always sends a positive or negative response back to the sender. Whether a command is valid and yields a positive response – e.g. Subscribed – depends on both the command and the state, which is represented as the private mutable field subscribers.
+
+As mentioned above, only one message is handled at a time and Akka makes sure that state changes are visible when the next message is processed, so there is no need to manually synchronize access to subscribers. Concurrency made easy!
+
+Finally let’s take a look at a portion of the extended test:
+
+{% highlight scala %}
+val subscribe01 = Subscribe(topic01, subscriber01.ref)
+mediator ! subscribe01
+sender.expectMsg(Subscribed(subscribe01))
+ 
+val subscribe02 = Subscribe(topic01, subscriber02.ref)
+mediator ! subscribe02
+sender.expectMsg(Subscribed(subscribe02))
+ 
+val subscribe03 = Subscribe(topic02, subscriber03.ref)
+mediator ! subscribe03
+sender.expectMsg(Subscribed(subscribe03))
+{% endhighlight %}
+
+As you can see, we are sending Subscribe messages to the mediator using the ! operator and expect to receive respective responses. As before the full code of the current state can be accessed on GitHub under tag step-02.
