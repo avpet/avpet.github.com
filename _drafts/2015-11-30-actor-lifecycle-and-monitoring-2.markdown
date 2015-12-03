@@ -100,24 +100,46 @@ class PublishSubscribeActor extends Actor {
 }
 {% endhighlight %}
 
-Как видно, поведение включает обработку команд – т.е. сообщений типа `PublishMessage` или `SubscribeToTopic` – и отсылку ответного сообщения обратно. Whether a command is valid and yields a positive response – e.g. `Subscribed` – depends on both the command and the state, which is represented as the private mutable field subscribers.
+Как видно, поведение включает обработку команд – т.е. сообщений типа `PublishMessage` или `SubscribeToTopic` – и отсылку ответного сообщения обратно. Реакция актора на команду (например, `SubscribeToTopic`) определяется не только сообщением, но и текущим состоянием актора (в данном случае - поле `subscribersMap`).
 
-As mentioned above, only one message is handled at a time and Akka makes sure that state changes are visible when the next message is processed, so there is no need to manually synchronize access to subscribers. Concurrency made easy!
+Ну и нет нужды говорить о том, что, поскольку обрабатывается только одно сообщение за раз, то отпадает необходимость в синхронизации доступа к `subscribersMap`.
 
-Finally let’s take a look at a portion of the extended test:
+И наконец, несколько более расширенный тест:
 
 {% highlight scala %}
-val subscribe01 = Subscribe(topic01, subscriber01.ref)
-mediator ! subscribe01
-sender.expectMsg(Subscribed(subscribe01))
- 
-val subscribe02 = Subscribe(topic01, subscriber02.ref)
-mediator ! subscribe02
-sender.expectMsg(Subscribed(subscribe02))
- 
-val subscribe03 = Subscribe(topic02, subscriber03.ref)
-mediator ! subscribe03
-sender.expectMsg(Subscribed(subscribe03))
+val actor = system.actorOf(PublishSubscribeActor.props)
+
+val subscriber1 = TestProbe()
+val subscriber2 = TestProbe()
+val subscriber3 = TestProbe()
+val sender = TestProbe()
+
+val subscribe1 = SubscribeToTopic("topicOne", subscriber1.ref)
+actor ! subscribe1
+sender.expectMsg(Subscribed(subscribe1))
+
+val subscribe2 = SubscribeToTopic("topicTwo", subscriber2.ref)
+actor ! subscribe2
+sender.expectMsg(Subscribed(subscribe2))
+
+val subscribe3 = SubscribeToTopic("topicThree", subscriber3.ref)
+actor ! subscribe3
+sender.expectMsg(Subscribed(subscribe3))
+
+actor ! GetTopicSubscribers("topic1")
+sender.expectMsg(Set(subscriber1.ref, subscriber2.ref))
+
+actor ! subscribe1
+sender.expectMsg(SubscribedAlready(subscribe1))
+
+val message = "message"
+
+val publish = PublishMessage("topic01", message)
+actor ! publish
+sender.expectMsg(MessagePublished(publish))
+subscriber1.expectMsg(message)
+subscriber2.expectMsg(message)
+subscriber3.expectNoMsg()
 {% endhighlight %}
 
-As you can see, we are sending Subscribe messages to the mediator using the ! operator and expect to receive respective responses. As before the full code of the current state can be accessed on GitHub under tag step-02.
+
