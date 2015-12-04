@@ -143,3 +143,30 @@ subscriber3.expectNoMsg()
 {% endhighlight %}
 
 
+Ask: Send-And-Receive-Future
+
+The ask pattern involves actors as well as futures, hence it is offered as a use pattern rather than a method on ActorRef:
+
+!!!! chage example releveantly !!!!
+    import akka.pattern.{ ask, pipe }
+    import system.dispatcher // The ExecutionContext that will be used
+    final case class Result(x: Int, s: String, d: Double)
+    case object Request
+     
+    implicit val timeout = Timeout(5 seconds) // needed for `?` below
+     
+    val f: Future[Result] =
+      for {
+        x <- ask(actorA, Request).mapTo[Int] // call pattern directly
+        s <- (actorB ask Request).mapTo[String] // call by implicit conversion
+        d <- (actorC ? Request).mapTo[Double] // call by symbolic name
+      } yield Result(x, s, d)
+     
+    f pipeTo actorD // .. or ..
+    pipe(f) to actorD
+
+This example demonstrates ask together with the pipeTo pattern on futures, because this is likely to be a common combination. Please note that all of the above is completely non-blocking and asynchronous: ask produces a Future, three of which are composed into a new future using the for-comprehension and then pipeTo installs an onComplete-handler on the future to affect the submission of the aggregated Result to another actor.
+
+Using ask will send a message to the receiving Actor as with tell, and the receiving actor must reply with sender() ! reply in order to complete the returned Future with a value. The ask operation involves creating an internal actor for handling this reply, which needs to have a timeout after which it is destroyed in order not to leak resources; see more below.
+
+
