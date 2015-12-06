@@ -1,7 +1,7 @@
 ---
 layout: post
-title:  "Акторы и их жизненнный цикл - II"
-date:   2015-12-02 00:30:00
+title:  "Акторы и их жизненный цикл - II"
+date:   2015-12-06 19:30:00
 categories: scala
 image: http://i.imgur.com/pzn4gyb.png
 ---
@@ -23,9 +23,9 @@ image: http://i.imgur.com/pzn4gyb.png
 publishSubscribeActor ! GetTopicSubscribers("topicName")
 {% endhighlight %}
 
-В классе `ActorRef` есть оператор `!` – или *"tell"* – с помощью которого сообщения отправляются соответсвующему актору. Как только сообщение отправлено, операция завершена и вызывающий код продолжает выполнение. Таким образом, здесь нет возвращаемого значения (кроме `Unit`), в этом и заключается асинхронность.
+В классе `ActorRef` есть оператор `!` – или *"tell"* – с помощью которого сообщения отправляются соответствующему актору. Как только сообщение отправлено, операция завершена и вызывающий код продолжает выполнение. Таким образом, здесь нет возвращаемого значения (кроме `Unit`), в этом и заключается асинхронность.
 
-Этот способ является предпочтительным, поскольку в этом случае отсутствует блокирование на отправке, что конечно же, лучше, для паралелльности и как следствие - масштабируемости.
+Этот способ является предпочтительным, поскольку в этом случае отсутствует блокирование на отправке, что конечно же, лучше, для параллельности и как следствие - масштабируемости.
 
 Если этот оператор вызван из другого актора, то имплицитно будет передана ссылка на актор-источник сообщения. Принимающий актор может получить эту ссылку (естественно, не на сам актор, а опять-таки `ActorRef`). Используя эту ссылку, принимающий актор может отправить ответное сообщение
 
@@ -113,20 +113,21 @@ val subscriber1 = TestProbe()
 val subscriber2 = TestProbe()
 val subscriber3 = TestProbe()
 val sender = TestProbe()
+implicit val senderRef = sender.ref
 
 val subscribe1 = SubscribeToTopic("topicOne", subscriber1.ref)
 actor ! subscribe1
 sender.expectMsg(Subscribed(subscribe1))
 
-val subscribe2 = SubscribeToTopic("topicTwo", subscriber2.ref)
+val subscribe2 = SubscribeToTopic("topicOne", subscriber2.ref)
 actor ! subscribe2
 sender.expectMsg(Subscribed(subscribe2))
 
-val subscribe3 = SubscribeToTopic("topicThree", subscriber3.ref)
+val subscribe3 = SubscribeToTopic("topicTwo", subscriber3.ref)
 actor ! subscribe3
 sender.expectMsg(Subscribed(subscribe3))
 
-actor ! GetTopicSubscribers("topic1")
+actor ! GetTopicSubscribers("topicOne")
 sender.expectMsg(Set(subscriber1.ref, subscriber2.ref))
 
 actor ! subscribe1
@@ -134,7 +135,7 @@ sender.expectMsg(SubscribedAlready(subscribe1))
 
 val message = "message"
 
-val publish = PublishMessage("topic01", message)
+val publish = PublishMessage("topicOne", message)
 actor ! publish
 sender.expectMsg(MessagePublished(publish))
 subscriber1.expectMsg(message)
@@ -142,31 +143,81 @@ subscriber2.expectMsg(message)
 subscriber3.expectNoMsg()
 {% endhighlight %}
 
+Взаимодействие "сообщение-ответное сообщение" с использованием операции `tell` 
 
-Ask: Send-And-Receive-Future
+{% highlight scala %}
+val subscribe1 = SubscribeToTopic("topicOne", subscriber1.ref)
+actor ! subscribe1
+sender.expectMsg(Subscribed(subscribe1))
+{% endhighlight %}
 
-The ask pattern involves actors as well as futures, hence it is offered as a use pattern rather than a method on ActorRef:
+можно переписать в виде "запрос-ответ" с использованием оператора `?`, или `ask`. 
 
-!!!! chage example releveantly !!!!
-    import akka.pattern.{ ask, pipe }
-    import system.dispatcher // The ExecutionContext that will be used
-    final case class Result(x: Int, s: String, d: Double)
-    case object Request
-     
-    implicit val timeout = Timeout(5 seconds) // needed for `?` below
-     
-    val f: Future[Result] =
-      for {
-        x <- ask(actorA, Request).mapTo[Int] // call pattern directly
-        s <- (actorB ask Request).mapTo[String] // call by implicit conversion
-        d <- (actorC ? Request).mapTo[Double] // call by symbolic name
-      } yield Result(x, s, d)
-     
-    f pipeTo actorD // .. or ..
-    pipe(f) to actorD
+{% highlight scala %}
+import akka.pattern.ask
+val subscribe1 = SubscribeToTopic("topicOne", subscriber1.ref)
+implicit val timeout = Timeout(5 seconds)
+val future = actor ? subscribe1
+val result = Await.result(future, timeout.duration).asInstanceOf[Subscribed]
+result should be(Subscribed(subscribe1))
+{% endhighlight %}
 
-This example demonstrates ask together with the pipeTo pattern on futures, because this is likely to be a common combination. Please note that all of the above is completely non-blocking and asynchronous: ask produces a Future, three of which are composed into a new future using the for-comprehension and then pipeTo installs an onComplete-handler on the future to affect the submission of the aggregated Result to another actor.
+В этом случае в ответ мы получаем `Future`. Поскольку паттерн `ask` связан в равной как с акторами, так и с `Future`, то он оформлен не непосредственно как метод `ActorRef`, а добавляется имплицитной конвертацией из трейта [`AskSupport`](http://doc.akka.io/japi/akka/2.3.6/akka/pattern/AskSupport.html). Операция `ask` включает создание вспомогательного временного актора для обработки ответа, который будет уничтожен после определенного промежутка времени.
 
-Using ask will send a message to the receiving Actor as with tell, and the receiving actor must reply with sender() ! reply in order to complete the returned Future with a value. The ask operation involves creating an internal actor for handling this reply, which needs to have a timeout after which it is destroyed in order not to leak resources; see more below.
+* Основы жизненного цикла акторов
 
+В общем случае жизненный цикл актора сравнительно прост. Его можно сравнить, например, с жизненным циклом сервлета с некоторыми специфическими отличиями.
 
+* Как и у любого класса, у актора есть конструктор;
+* Следующим будет вызван метод `preStart`. В нем можно проинициализировать ресурсы, которые затем можно будет освободить в `postStop`;
+* Между инициализацией актора и его остановкой, т.е. во все остальное время актор занимается обработкой сообщений в методе `receive`.
+
+Например, простейший актор:
+
+{% highlight scala %}
+class LifecycleActor extends Actor with ActorLogging {
+
+  log.info("LifecycleActor constructor")
+  log.info(context.self.toString())
+
+  override def preStart() = {
+    log.info("preStart of LifecycleActor")
+  }
+
+  def receive = LoggingReceive {
+    case "test_message" => log.info("test_message")
+  }
+
+  override def postStop() = {
+    log.info("postStop of LifecycleActor")
+  }
+
+}
+
+object LifecycleApp extends App {
+
+  val actorSystem = ActorSystem("DemoSystem")
+  val actor = actorSystem.actorOf(Props[LifecycleActor], "lifecycleActor")
+
+  actor ! "test_message"
+
+  // wait for a couple of seconds before shutdown
+  Thread.sleep(2000)
+  actorSystem.shutdown()
+}
+
+{% endhighlight %}
+
+выводит:
+
+    LifecycleActor constructor
+    Actor[akka://DemoSystem/user/lifecycleActor#-1080888369]
+    preStart of LifecycleActor
+    test_message
+    postStop of LifecycleActor
+
+Фактически, разница между конструктором и `preStart`'ом не бросается в глаза. Даже в конструкторе актор имеет доступ к `ActorContext`, но, есть нюанс, например, при перезапуске актора, связанный с child-акторами. И конструктор, и `preStart` вызываются при перезапуске. Но фактически это два разных паттерна инициализации. Возможно, инициализация нужна для каждого нового поколения "воплощения" актора, но также возможен случай, когда инициализация нужна только в случае создания первого "воплощения" актора.
+
+В случае инициализации с помощью конструктора мы имеем следующие преимущества. Во-первых, мы можем использовать `val` поля для того чтобы хранить состояние, которое не меняется за время жизни актора, т.е. мы повышаем иммутабельность актора. Конструктор вызывается для каждого воплощения актора, следовательно, реализация может всегда полагаться, что такая инициализация гарантированно произошла. Это также является недостатком этого метода, поскольку есть ситуации, когда какая-то реинициализация, наоборот, нежелательна при перезапуске. Например, часто полезно сохранять child-акторы. 
+
+Именно в этом случае может использоваться `preStart()` актора  - он вызывается напрямую только при создании первого "воплощения" - то есть при создании `ActorRef`'а (который, естественно, не меняется при перезапуске актора). При перезапуске, `preStart` вызывается из `postRestart`, если последний не переопределен, при каждом перезапуске. Но мы можем переопределить `postRestart` и отключить таким образом подобное поведение, таким образом обеспечив единственный вызов `preStart`. 
