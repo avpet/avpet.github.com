@@ -15,23 +15,27 @@ image: http://i.imgur.com/pzn4gyb.png
 
 #### Остановка актора  ####
 
-Actors are stopped by invoking the stop method of a ActorRefFactory, i.e. ActorContext or ActorSystem. Typically the context is used for stopping the actor itself or child actors and the system for stopping top level actors. The actual termination of the actor is performed asynchronously, i.e. stop may return before the actor is stopped.
+Актор может быть остановлен с помощью вызова метода `stop` из `ActorRefFactory`, т.е. `ActorContext` или `ActorSystem` - в зависимости от того, нужно ли актору остановить самого себя и child-акторы, или нужно остановить один из акторов верхнего уровня. Собственно остановка актора происходит асинхронно.
 
-    class MyActor extends Actor {
-     
-      val child: ActorRef = ???
-     
-      def receive = {
-        case "interrupt-child" =>
-          context stop child
-     
-        case "done" =>
-          context stop self
-      }
-     
-    }
+{% highlight scala %}
+import akka.actor.{ActorRef, Actor}
 
-Processing of the current message, if any, will continue before the actor is stopped, but additional messages in the mailbox will not be processed. By default these messages are sent to the deadLetters of the ActorSystem, but that depends on the mailbox implementation.
+class StoppingActor extends Actor {
+
+  val child: ActorRef = ???
+
+  def receive = {
+    case "interrupt-child" =>
+      context stop child
+
+    case "done" =>
+      context stop self
+  }
+
+}
+{% endhighlight %}
+
+Если в момент остановки обрабатывалось сообщение, оно будет обработано до конца, и только последующие сообщения уже не будут обрабатываться - по умолчанию, они отправятся в `deadLetters` of the ActorSystem, but that depends on the mailbox implementation.
 
 Termination of an actor proceeds in two steps: first the actor suspends its mailbox processing and sends a stop command to all its children, then it keeps processing the internal termination notifications from its children until the last one is gone, finally terminating itself (invoking postStop, dumping mailbox, publishing Terminated on the DeathWatch, telling its supervisor). This procedure ensures that actor system sub-trees terminate in an orderly fashion, propagating the stop command to the leaves and collecting their confirmation back to the stopped supervisor. If one of the actors does not respond (i.e. processing a message for extended periods of time and therefore not receiving the stop command), this whole process will be stuck.
 
