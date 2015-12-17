@@ -37,7 +37,47 @@ class StoppingActor extends Actor {
 
 Если в момент остановки обрабатывалось сообщение, оно будет обработано до конца, и только последующие сообщения уже не будут обрабатываться - по умолчанию, они отправятся специальному синтетическому актору `deadLetters`. 
 
-Остановка актора происходит в два шага: сперва актор приостанавливает обработку сообщений из mailbox'а, а затем посылает сигнал остановки всем своим child-акторам, после этого обрабатывает внутренние нотификации остановки от child-акторов, и наконец, останавливается сам (при этом выхывается `postStop`, уничтожается mailbox, publishing Terminated on the DeathWatch, telling its supervisor). This procedure ensures that actor system sub-trees terminate in an orderly fashion, propagating the stop command to the leaves and collecting their confirmation back to the stopped supervisor. If one of the actors does not respond (i.e. processing a message for extended periods of time and therefore not receiving the stop command), this whole process will be stuck.
+Остановка актора происходит в два шага: сперва актор приостанавливает обработку сообщений из mailbox'а, а затем посылает сигнал остановки всем своим child-акторам, после этого обрабатывает внутренние нотификации остановки от child-акторов, и наконец, останавливается сам. При этом выхывается `postStop`, уничтожается mailbox, и сообщение `Terminated` отправляется компонентом `DeathWatch` родителю актора. В принципе, таким образом одитель может остлеживать момент остановки child-актора, например, вот так
+
+{% highlight scala %}
+object TerminationExample extends App {
+
+  val system = ActorSystem("system")
+
+  class ActorB extends Actor {
+    def receive = {
+      case _ =>
+    }
+
+    override def postStop() {
+      println("postStop B")
+    }
+  }
+
+  class ActorA extends Actor {
+    val actorB = context.actorOf(Props[ActorB])
+    context.watch(actorB)
+
+    def receive = {
+      case Terminated(actor) =>
+        println("supervised terminated :" + actor)
+    }
+
+    override def postStop() {
+      println("postStop A")
+    }
+  }
+
+  val actorA = system.actorOf(Props(classOf[ActorA]))
+
+  system.registerOnTermination(println("System shutdown"))
+  system.shutdown()
+}
+{% endhighlight %}
+
+но вообще мониторинг - отдельная тема, и в данном примере получение сообщения `Terminated` не гарантировано.
+
+This procedure ensures that actor system sub-trees terminate in an orderly fashion, propagating the stop command to the leaves and collecting their confirmation back to the stopped supervisor. If one of the actors does not respond (i.e. processing a message for extended periods of time and therefore not receiving the stop command), this whole process will be stuck.
 
 Upon ActorSystem.terminate, the system guardian actors will be stopped, and the aforementioned process will ensure proper termination of the whole system.
 
