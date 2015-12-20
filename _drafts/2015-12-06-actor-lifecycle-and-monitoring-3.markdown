@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Акторы и их жизненный цикл - III"
-date:   2015-12-07 19:30:00
+date:   2015-12-20 19:30:00
 categories: scala
 image: http://i.imgur.com/pzn4gyb.png
 ---
@@ -13,7 +13,7 @@ image: http://i.imgur.com/pzn4gyb.png
 }
 </style>
 
-#### Остановка актора  ####
+### Остановка актора  ###
 
 Актор может быть остановлен с помощью вызова метода `stop` из `ActorRefFactory`, т.е. `ActorContext` или `ActorSystem` - в зависимости от того, нужно ли актору остановить самого себя и child-акторы, или нужно остановить один из акторов верхнего уровня. Собственно остановка актора происходит асинхронно.
 
@@ -22,7 +22,7 @@ import akka.actor.{ActorRef, Actor}
 
 class StoppingActor extends Actor {
 
-  val child: ActorRef = ???
+  val child: ActorRef = ???\\
 
   def receive = {
     case "interrupt-child" =>
@@ -37,7 +37,10 @@ class StoppingActor extends Actor {
 
 Если в момент остановки обрабатывалось сообщение, оно будет обработано до конца, и только последующие сообщения уже не будут обрабатываться - по умолчанию, они отправятся специальному синтетическому актору `deadLetters`. 
 
-Остановка актора происходит в два шага: сперва актор приостанавливает обработку сообщений из mailbox'а, а затем посылает сигнал остановки всем своим child-акторам, после этого обрабатывает внутренние нотификации остановки от child-акторов, и наконец, останавливается сам. При этом выхывается `postStop`, уничтожается mailbox, и сообщение `Terminated` отправляется компонентом `DeathWatch` родителю актора. В принципе, таким образом одитель может остлеживать момент остановки child-актора, например, вот так
+Остановка актора происходит в два шага: сперва актор приостанавливает обработку сообщений из mailbox'а, а затем посылает сигнал остановки всем своим child-акторам, после этого обрабатывает внутренние нотификации остановки от child-акторов, и наконец, останавливается сам. При этом вызывается `postStop`, уничтожается mailbox, и сообщение `Terminated` отправляется компонентом `DeathWatch` родителю актора. В принципе, таким образом родитель может отслеживать момент остановки child-актора, например, вот так
+
+{: .center}
+![HYWvR2m.png](http://i.imgur.com/HYWvR2m.png)
 
 {% highlight scala %}
 object TerminationExample extends App {
@@ -77,66 +80,88 @@ object TerminationExample extends App {
 
 но вообще мониторинг - отдельная тема, и в данном примере получение сообщения `Terminated` не гарантировано.
 
-This procedure ensures that actor system sub-trees terminate in an orderly fashion, propagating the stop command to the leaves and collecting their confirmation back to the stopped supervisor. If one of the actors does not respond (i.e. processing a message for extended periods of time and therefore not receiving the stop command), this whole process will be stuck.
+#### Когда вызывается postStop? ####
 
-Upon ActorSystem.terminate, the system guardian actors will be stopped, and the aforementioned process will ensure proper termination of the whole system.
+В предыдущем фрагменте `postStop` актора вызывается, когда останавливается `ActorSystem`. Помимо этого, есть еще несколько ситуаций:
 
-The postStop hook is invoked after an actor is fully stopped. This enables cleaning up of resources:
+*ActorSystem.stop()*
 
-    override def postStop() {
-      // clean up some resources ...
-    }
+Актор можно остановить, используя метод `stop` или `ActorSystem`, или `ActorContext`.
 
-Note
+{% highlight scala %}
+object StoppingDemoApp extends App{
 
-Since stopping an actor is asynchronous, you cannot immediately reuse the name of the child you just stopped; this will result in an InvalidActorNameException. Instead, watch the terminating actor and create its replacement in response to the Terminated message which will eventually arrive.
-PoisonPill
+  val actorSystem=ActorSystem("LifecycleActorSystem")
+  val lifecycleActor=actorSystem.actorOf(Props[LifecycleDemoLoggingActor],"lifecycleActor")
 
-You can also send an actor the akka.actor.PoisonPill message, which will stop the actor when the message is processed. PoisonPill is enqueued as ordinary messages and will be handled after messages that were already queued in the mailbox.
-Graceful Stop
+  actorSystem.stop(lifecycleActor)
 
-gracefulStop is useful if you need to wait for termination or compose ordered termination of several actors:
+}
+{% endhighlight %}
 
-    import akka.pattern.gracefulStop
-    import scala.concurrent.Await
-     
-    try {
-      val stopped: Future[Boolean] = gracefulStop(actorRef, 5 seconds, Manager.Shutdown)
-      Await.result(stopped, 6 seconds)
-      // the actor has been stopped
-    } catch {
-      // the actor wasn't stopped within 5 seconds
-      case e: akka.pattern.AskTimeoutException =>
-    }
+*ActorContext.stop*
 
-    object Manager {
-      case object Shutdown
-    }
-     
-    class Manager extends Actor {
-      import Manager._
-      val worker = context.watch(context.actorOf(Props[Cruncher], "worker"))
-     
-      def receive = {
-        case "job" => worker ! "crunch"
-        case Shutdown =>
-          worker ! PoisonPill
-          context become shuttingDown
-      }
-     
-      def shuttingDown: Receive = {
-        case "job" => sender() ! "service unavailable, shutting down"
-        case Terminated(`worker`) =>
-          context stop self
-      }
-    }
+Например, мы можем послать сообщение актору, в ответ на которое он остановит себя:
 
-When gracefulStop() returns successfully, the actor’s postStop() hook will have been executed: there exists a happens-before edge between the end of postStop() and the return of gracefulStop().
+{% highlight scala %}
+class LifecycleDemoLoggingActor extends Actor with ActorLogging {
 
-In the above example a custom Manager.Shutdown message is sent to the target actor to initiate the process of stopping the actor. You can use PoisonPill for this, but then you have limited possibilities to perform interactions with other actors before stopping the target actor. Simple cleanup tasks can be handled in postStop.
+  def receive = LoggingReceive {
+    case "hello" => log.info("hello")
+    case "stop" => context.stop(self)
+  }
+}
+{% endhighlight %}
 
-Warning
+и
 
-Keep in mind that an actor stopping and its name being deregistered are separate events which happen asynchronously from each other. Therefore it may be that you will find the name still in use after gracefulStop() returned. In order to guarantee proper deregistration, only reuse names from within a supervisor you control and only in response to a Terminated message, i.e. not for top-level actors.
+{% highlight scala %}
+object StoppingDemoApp2 extends App {
+
+  val actorSystem = ActorSystem("LifecycleActorSystem")
+  val lifecycleActor = actorSystem.actorOf(Props[LifecycleDemoLoggingActor], "lifecycleActor")
+
+  lifecycleActor ! "stop"
+}
+{% endhighlight %}
+
+*PoisonPill*
+
+Но вообще говоря, такое сообщение уже есть в Акке, которое приблизительно так и работает - получивший его актор вызывает `context.stop`. Сообщение `PoisonPill`, как и любое другое сообщение - как например, предыдущее сообщение `"stop"`, оно ставится в очередь в mailbox и обрабатывается в  свое время.
+
+{% highlight scala %}
+object StoppingDemoApp3 extends App {
+
+  val actorSystem = ActorSystem("LifecycleActorSystem")
+  val lifecycleActor = actorSystem.actorOf(Props[LifecycleDemoLoggingActor], "lifecycleActor")
+
+  lifecycleActor ! PoisonPill
+}
+{% endhighlight %}
+
+*Kill*
+
+Еще один вариант - вместо `PoisonPill` послать сообщение `Kill`.
+
+{% highlight scala %}
+object StoppingDemoApp4 extends App {
+
+  val actorSystem = ActorSystem("LifecycleActorSystem")
+  val lifecycleActor = actorSystem.actorOf(Props[LifecycleDemoLoggingActor], "lifecycleActor")
+
+  lifecycleActor ! Kill
+}
+{% endhighlight %}
+
+Разница между сообщениями `PoisonPill` или `Kill` в следующем:
+
+* В случае `PoisonPill`, сообщение `Terminated` рассылается всем акторам, вызвавшим `context.watch` для этого актора.
+
+* в ответ на сообщение `Kill`, актор бросает исключение `ActorKilledException`, что расценивается супервизором как отказ. Актор приостанавливается и здесь уже супервизор решает, как этот отказ обработать - продолжить выполнение, перезапустить актор или остановить его вообще. 
+
+Вообще, процедура остановки актора учитывает древовидную структуру системы акторов, рассылая команду останова всем листьям и собирая их ответы для уже остановленного супервизора. 
+При вызове `ActorSystem.terminate`, останавливается актор, называемый `system guardian`, роль которого именно в том, чтобы обеспечить правильную остановку всей системы.
+
+Ну и поскольку остановка актора является асинхронной, нельзя, например, сразу воспользоваться именем актора, который был остановлен - это можно сделать только после того, как мы получим `Terminated` от него - для чего нужно будет опять-таки воспользоваться `context.watch`.
 
 
