@@ -22,7 +22,7 @@ import akka.actor.{ActorRef, Actor}
 
 class StoppingActor extends Actor {
 
-  val child: ActorRef = ???\\
+  val child: ActorRef = ???
 
   def receive = {
     case "interrupt-child" =>
