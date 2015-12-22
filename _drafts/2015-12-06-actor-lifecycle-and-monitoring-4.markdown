@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Акторы и их жизненный цикл - III"
+title:  "Акторы и их жизненный цикл - IV"
 date:   2015-12-20 19:30:00
 categories: scala
 image: http://i.imgur.com/pzn4gyb.png
@@ -13,26 +13,44 @@ image: http://i.imgur.com/pzn4gyb.png
 }
 </style>
 
-### Остановка актора  ###
+### Тестирование жизненного цикла актора - ActorLifeCycleSpec  ###
 
 Актор может быть остановлен с помощью вызова метода `stop` из `ActorRefFactory`, т.е. `ActorContext` или `ActorSystem` - в зависимости от того, нужно ли актору остановить самого себя и child-акторы, или нужно остановить один из акторов верхнего уровня. Собственно остановка актора происходит асинхронно.
 
 {% highlight scala %}
-import akka.actor.{ActorRef, Actor}
+    "invoke preRestart, preStart, postRestart when using OneForOneStrategy" in {
+      filterException[ActorKilledException] {
+        val id = newUuid.toString
+        val supervisor = system.actorOf(Props(classOf[Supervisor], OneForOneStrategy(maxNrOfRetries = 3)(List(classOf[Exception]))))
+        val gen = new AtomicInteger(0)
+        val restarterProps = Props(new LifeCycleTestActor(testActor, id, gen) {
+          override def preRestart(reason: Throwable, message: Option[Any]) { report("preRestart") }
+          override def postRestart(reason: Throwable) { report("postRestart") }
+        }).withDeploy(Deploy.local)
+        val restarter = Await.result((supervisor ? restarterProps).mapTo[ActorRef], timeout.duration)
 
-class StoppingActor extends Actor {
-
-  val child: ActorRef = ???
-
-  def receive = {
-    case "interrupt-child" =>
-      context stop child
-
-    case "done" =>
-      context stop self
-  }
-
-}
+        expectMsg(("preStart", id, 0))
+        restarter ! Kill
+        expectMsg(("preRestart", id, 0))
+        expectMsg(("postRestart", id, 1))
+        restarter ! "status"
+        expectMsg(("OK", id, 1))
+        restarter ! Kill
+        expectMsg(("preRestart", id, 1))
+        expectMsg(("postRestart", id, 2))
+        restarter ! "status"
+        expectMsg(("OK", id, 2))
+        restarter ! Kill
+        expectMsg(("preRestart", id, 2))
+        expectMsg(("postRestart", id, 3))
+        restarter ! "status"
+        expectMsg(("OK", id, 3))
+        restarter ! Kill
+        expectMsg(("postStop", id, 3))
+        expectNoMsg(1 seconds)
+        system.stop(supervisor)
+      }
+    }
 {% endhighlight %}
 
 Если в момент остановки обрабатывалось сообщение, оно будет обработано до конца, и только последующие сообщения уже не будут обрабатываться - по умолчанию, они отправятся специальному синтетическому актору `deadLetters`. 
