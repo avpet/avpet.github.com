@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Акторы и их жизненный цикл - IV"
-date:   2015-12-26 19:30:00
+date:   2015-12-26 20:30:00
 categories: scala
 image: http://i.imgur.com/pzn4gyb.png
 ---
