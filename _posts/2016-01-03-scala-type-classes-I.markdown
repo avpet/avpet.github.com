@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "'Ad hoc' полиморфизм. Классы типов - I"
-date:   2016-01-02 14:30:00
+date:   2016-01-03 09:30:00
 categories: scala
 image: http://imageshack.com/a/img905/4510/8e7vkO.png
 ---
