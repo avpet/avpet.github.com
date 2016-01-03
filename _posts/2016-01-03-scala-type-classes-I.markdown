@@ -29,7 +29,7 @@ th, td {
 * [http://danielwestheide.com/blog/2013/02/06/the-neophytes-guide-to-scala-part-12-type-classes.html](http://danielwestheide.com/blog/2013/02/06/the-neophytes-guide-to-scala-part-12-type-classes.html)
 * [https://www.safaribooksonline.com/blog/2013/05/28/scala-type-classes-demystified/](https://www.safaribooksonline.com/blog/2013/05/28/scala-type-classes-demystified/)
 
-Полиморфизм - способность функции обрабатывать данные разных типов. Полиморфический тип - такой тип, операции которого могут применятся к значениям других типов:
+Полиморфизм - способность функции обрабатывать данные разных типов. 
 
 Существует несколько видов полиморфизма:
 
