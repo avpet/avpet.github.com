@@ -22,6 +22,13 @@ th, td {
 }
 </style>
 
+Источники:
+
+* [https://en.wikipedia.org/wiki/Polymorphism_(computer_science)](https://en.wikipedia.org/wiki/Polymorphism_(computer_science))
+* [https://www.manning.com/books/scala-in-depth](https://www.manning.com/books/scala-in-depth)
+* [http://danielwestheide.com/blog/2013/02/06/the-neophytes-guide-to-scala-part-12-type-classes.html](http://danielwestheide.com/blog/2013/02/06/the-neophytes-guide-to-scala-part-12-type-classes.html)
+* [https://www.safaribooksonline.com/blog/2013/05/28/scala-type-classes-demystified/](https://www.safaribooksonline.com/blog/2013/05/28/scala-type-classes-demystified/)
+
 Полиморфизм - способность функции обрабатывать данные разных типов. Полиморфический тип - такой тип, операции которого могут применятся к значениям других типов:
 
 Существует несколько видов полиморфизма:
@@ -312,13 +319,7 @@ object Statistics {
 #### Преимущества type-классов
 
 1. Разделение абстракций - мы модифицируем только специально созданные для этого accessor'ы, и нам не нужно менять уже существующие типы.
-2. Возможность композиции - с помощью контекстных привязок мы можем указать и поддерживать несколько типов. Это гибче, чем в случае абстрактного интерфейса, или даже их комбинации.
+2. Возможность композиции - с помощью контекстных привязок мы можем указать и поддерживать несколько типов одновременно.
 3. Возможность переопределения - классы типов позволяют переопределять дефолтные accessor'ы путем использования implicit'ов.
 
-Источники:
-
-* [https://en.wikipedia.org/wiki/Polymorphism_(computer_science)](https://en.wikipedia.org/wiki/Polymorphism_(computer_science))
-* [https://www.manning.com/books/scala-in-depth](https://www.manning.com/books/scala-in-depth)
-* [http://danielwestheide.com/blog/2013/02/06/the-neophytes-guide-to-scala-part-12-type-classes.html](http://danielwestheide.com/blog/2013/02/06/the-neophytes-guide-to-scala-part-12-type-classes.html)
-* [https://www.safaribooksonline.com/blog/2013/05/28/scala-type-classes-demystified/](https://www.safaribooksonline.com/blog/2013/05/28/scala-type-classes-demystified/)
 
