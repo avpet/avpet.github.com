@@ -10,332 +10,173 @@ image: http://imageshack.com/a/img905/4510/8e7vkO.png
 
 * [https://en.wikipedia.org/wiki/Polymorphism_(computer_science)](https://en.wikipedia.org/wiki/Polymorphism_(computer_science))
 
-Что такое вообще context bound'ы и их предшественники - view bound'ы?
+Что такое вообще context bound'ы и их предшественники - view bound'ы? Немного предыстории type class'ов.
 
-И тот и другой были попыткой достичь в той или иной степени эффекта type class'ов, которые уже существовали в Haskell. 
+И тот и другой были попыткой достичь в той или иной степени эффекта type class'ов, которые уже существовали в Haskell. Сперва появились в Scala появились т.н. view (см. [спецификацию Scala, раздел 7.3](http://www.scala-lang.org/files/archive/spec/2.11/07-implicit-parameters-and-views.html#views)) - т.е. implicit'ные преобразования (conversion). На базе imlicit'ных параметров и методов можно построить implicit'ные преобразования, или views. Такое преобразование из типа `S` в тип `T` определяется implicit'ным же значением, имеющим тип функции вида `S=>T` или `(=>S)=>T`. 
 
- The change history for Scala implies that implicits were a generalization of view bounds, and a view bound is, itself, a generalization of automatic type conversion, which is very common indeed.
+Implicit'ные преобразования часто полезны, например, в случае, когда мы работаем с двумя библиотеками, которые ничего не знают друг о друге. Каждая из библиотек может по своему моделировать одну и ту же сущность. Implicit conversion'ы помогают или избавиться, или уменшить количество явных преобразований одного типа в другой.
 
-Implicits then enabled type classes, but I'd be very surprised if that was the original intent.
-
-Edit
-
-The release notes for Scala 2.0 (2006) say:
-
-    Views in Scala 1.0 have been replaced by the more general concept of implicit parameters
-
-That doesn't mean, of course, that implicit parameters were introduced with the goal of replacing views.
-
-However, Odersky clearly likes it when once concept can replace multiple ones. In that sense, it may well be the case that Odersky wanted type classes, but did not want to introduce a mechanism to handle that exclusively, and, therefore, came up with something else that let him remove one concept (Views) and replace it with a more generic concept that handles both views and type classes.
-
-In case anyone is interested, Poor Man's Type Classes, referred to by Brian back at Stack Overflow, is dated 2006 as well. Clearly, Odersky was aware of the link between implicits and type classes when he introduced them.
-
-
-
-
-What is a View Bound?
-
-A view bound was a mechanism introduced in Scala to enable the use of some type A as if it were some type B. The typical syntax is this:
-
-    def f[A <% B](a: A) = a.bMethod
-
-In other words, A should have an implicit conversion to B available, so that one can call B methods on an object of type A. The most common usage of view bounds in the standard library (before Scala 2.8.0, anyway), is with Ordered, like this:
-
-    def f[A <% Ordered[A]](a: A, b: A) = if (a < b) a else b
-
-Because one can convert A into an Ordered[A], and because Ordered[A] defines the method <(other: A): Boolean, I can use the expression a < b.
-
-
-
-Полиморфизм - способность функции обрабатывать данные разных типов. 
-
-Существует несколько видов полиморфизма:
-
-* "Ad hoc" полиморфизм: функция описывает различные реализации в зависимости от указанных типов. "Ad hoc" полиморфизм поддерживается во многих языках, например, путем перегрузки функций.
-* Параметрический полиморфизм: реализация не полагается на какие-то конкретные типы, и может быть использована для любых типов. Например, параметрический класс `List[_]` описывает семейство типов - `List[String]`, `List[Int]`, `List[List[Set[Date]]]` и т.д. Параметрический полиморфизм в функциональном программировании обычно обозначается просто как «полиморфизм». 
-* Наследование ("subtyping"), или "полиморфизм подтипов" - класс описывает семейство типов, которые объединены общим суперклассом. В ООП именно это, как правило, называют просто "полиморфизм". Например, `class Record extends Serializable`.
-
-Классы типов - еще один механизм "ad hoc" полиморфизма. Целью типов классов является следующее - мы хотим, чтобы наша функция поддерживала некоторое семейство типов, при этом мы не хотели бы менять собственно эти типы. Эту проблему можно было бы решить с помощью адаптеров - в этом случае мы оборачиваем исходный тип в некторый адаптер/декоратор, с которым умеет работать функция. Но таким образом мы скрываем исходный тип, и к тому же заставляем клиентский код передавать значения типа этого вспомогательного адаптера (декоратора), а не того типа, который нам нужен. Классы типов позволяют решить эти проблемы. Можно сказать, что классы типов позволяют связать некоторое дополнительное поведение с типами, не меняя сами типы непосредственно. В принципе, частично эти проблемы можно решить путем implicit-преобразований, но преобразования имеют некоторые ограничения и обладают меньшей гибкостью. 
-
-Если в параметрическом полиморфизме, в классе `C[T]` мы определяем метод, он работает одинаково для любых параметров - реализация знает только о некотором типе `T`. В случае же "ad-hoc" полиморфизма, у нас могут быть разные реализации для разных типов аргументов; например, что для случаев `1+2` или `“x”+”y”` мы можем предоставить 2 разных реализации. 
-
-Типичные use case'ы, которые могут быть решены с помощью классов типов:
-
-1. Синхронизация файлов и директорий в нескольких файловых системах. Файлы могут быть локальными файлами, директориями, или же ссылками на файл (URL). Директории содержат другие файлы (или директории) (пример из книги "Scala In Depth").
-2. Вычисление суммы (среднего значения, и др. агрегатных значений) коллекции элементов. Как сделать общую реализацию, с учетом того, причем диапазон типов должен быть ограничен, поскольку операция имеет смысл только для некоторых типов.
-3. Конвертация между JSON и объектным представлением - классы типов могут содержать реализации конвертации для различных типов. 
-
-#### Синхронизация файлов
-
-В первом случае, в ООП реализации мы определяем абстрактный интерфейс `FileLike` с необходимыми нам методами.
+Как известно, функция неявного преобразования, или *implicit conversion*, является функция с одним параметром и ключевым словом `implicit`, автоматически преобразующая значения одного типа в значения другого типа. Например, мы хотим сконвертировать целые значения `n` в дробные значения `n / 1`. В таком случае преобразование будет выглядеть вот так:
 
 {% highlight scala %}
-trait FileLike {
-  def name : String
-  def exists : Boolean
-  def isDirectory : Boolean
-  def children : Seq[FileLike]
-  def child(name : String) : FileLike
-  def mkdirs() : Unit
-  def content : InputStream
-  def writeContent(otherContent : InputStream) : Unit
+implicit def int2Fraction(n: Int) = Fraction(n, 1) 
+{% endhighlight %}
+
+И срабатывает вот так: 
+
+{% highlight scala %}
+val result = 3 * Fraction(4, 5) // Calls int2Fraction(3) 
+{% endhighlight %}
+
+Т.е. целое число `3` превращается в объект `Fraction`, который затем умножается на `Fraction(4, 5)`.
+
+Теперь немного отвлечемся на ограничение типов - существуют ситуации, когда нам нужно наложить ограничения на параметрические типы. Например, пусть есть тип `Pair` в котором оба значения имеют одинаковые типы: 
+
+{% highlight scala %}
+class Pair[T](val first: T, val second: T) 
+{% endhighlight %}
+
+В этом типе присутствует метод `smaller`, который возвращает меньшее из значений: 
+
+{% highlight scala %}
+class Pair[T](val first: T, val second: T) {
+  def smaller = if (first.compareTo(second) < 0) first else second
+// Error
 }
 {% endhighlight %}
 
-Тогда метод синхронизации бы выглядел приблизительно так:
+Что, естественно, не будет работать — поскольку о типе `T` нам неизвестно ничего, в том числе и то, что он имеет метод `compareTo`. Для этого нам нужно добавить *upper bound*, или верхнюю границу типа `T <: Comparable[T]`, с помощью которой мы декларируем, что `T` должен быть подтипом `Comparable[T]`. 
 
 {% highlight scala %}
-  def synchronize(from: FileLike, to: FileLike): Unit = {
-    def synchronizeFile(file1: FileLike, file2: FileLike): Unit = {
-      file2.writeContent(file1.content)
-    }
-
-    def synchronizeDirectory(dir1: FileLike, dir2: FileLike): Unit = {
-      def findFile(file: FileLike, directory: FileLike): Option[FileLike] =
-        (for {
-          file2 <- directory.children if file.name == file2.name
-        } yield file2).headOption
-
-      for (file1 <- dir1.children) {
-        val file2 = findFile(file1, dir2).getOrElse(dir2.child(file1.name))
-        if (file1.isDirectory) {
-          file2.mkdirs()
-        }
-        synchronize(file2, file1)
-      }
-    }
-
-    if (from.isDirectory) {
-      synchronizeDirectory(from, to)
-    } else {
-      synchronizeFile(from, to)
-    }
-  }
-{% endhighlight %}
-
-
-Очевидно, что в таком варианте легко перепутать `from` и `to`. Чтобы предотвратить это, можно попробовать выделить типы `F` и `T`, для того чтобы гарантировать правильный порядок, тогда нам придется поменять сигнатуру вызова `synchronize` (а также сигнатуры `synchronizeFile` и `synchronizeDirectory`), добавив параметрические аргументы, ограниченные сверху типом `FileLike`:
-
-{% highlight scala %}
-def synchronize[F <: FileLike, T <: FileLike](from: F, to: T): Unit
-
-def synchronizeFile(file1: F, file2: T): Unit
-
-def synchronizeDirectory(dir1: F, dir2: T): Unit
-{% endhighlight %}
-
-и сам вызов `synchronize` будет осуществляться следующим образом:
-
-{% highlight scala %}
-synchronize[F, T](file1, file2)
-{% endhighlight %}
-
-Правда, `FileLike.children` ничего не знает о типе `F`, поэтому нам придется поменять и сам интерфейс `FileLike`. 
-
-{% highlight scala %}
-trait FileLike[T <: FileLike[T]] {
-...
-  def children : Seq[T]
-  def child(name : String) : T
-...
+class Pair[T <: Comparable[T]](val first: T, val second: T) {
+  def smaller = if (first.compareTo(second) < 0) first else second
 }
 {% endhighlight %}
 
-Но один недостаток остается все равно - для каждого нового типа файла нам нужно определить новый наследник `FileLike`. И вот здесь можно было бы использовать классы типов. Вместо `FileLike[T <: FileLike[T]]`, мы можем объявить `FileLike[T]`. Такой трейт позволит нам использовать любой тип `T` как файл безо всякого наследования и вообще изменений, и называется классом типов. Вся идиома в целом выглядит следующим образом: 
-
-1. класс типов - посредством которого мы получаем доступ к некоторому типу; слово "доступ" здесь имеет ключевой смысл, поскольку трейт не будет наследоваться исходными типами, но его реализации будут использоваться для доступа, и значения исходного типа будут передаваться в качестве параметра.
-2. companion-объект с таким же названием - который содержит дефолтные реализации класса типов для некоторых типов - и которые можно или переопределить, или дополнить при необходимости; 
-3. собственно методы, с контекстными привязками (context bounds) в тех местах, где используется данный трейт. 
-
-Новая версия трейта `FileLike` будет выглядеть следующим образом - без ограничения типа, и теперь принимающая значение в качестве параметра:
+Но этот пример тоже несколько упрощенный и не без недостатков. Если мы попробуем воспользоваться `Pair(4, 2)`, то компилятор скажет, что `T = Int`, и ограничение `T <: Comparable[T]` не выполнено -  `Int` из стандартной библиотеки Scala не является подтипом `Comparable[Int]`, в отличие джавовского `java.lang.Integer`. И существует тип-обертка `RichInt`, который реализует `Comparable[Int]`, вместе с соответсвующим implicit преобразованием из `Int` в `RichInt`. Для того, чтобы мы могли задекларировать, что тип `T` может при необходимости быть неявно сконвертирован, используется т.н. *view bound*: 
 
 {% highlight scala %}
-trait FileLike[T] {
-  def name(file : T) : String
-  def isDirectory(file : T) : Boolean
-  def children(directory : T) : Seq[T]
-  def child(parent : T, name : String) : T
-  def mkdirs(file : T) : Unit
-  def content(file : T) : InputStream
-  def writeContent(file : T, otherContent : InputStream) : Unit
+class Pair[T <% Comparable[T]] 
+{% endhighlight %}
+
+Оператор `<%`  как раз и означает, что `T` может быть сконвертирован в `Comparable[T]` при наличии соотвествующего implicit conversion. *View bound* и был введен в Scala для того чтобы использовать некоторый тип `A` там, где требуется некоторый тип `B`. The typical syntax is this:
+
+{% highlight scala %}
+def f[A <% B](a: A) = a.bMethod
+{% endhighlight %}
+
+Другими словами, должны быть доступны implicit'ные преобразования `A` в `B`, для того чтобы мы могли вызывать методы `B` у объекта типа `A`. До Scala 2.8.0 view bound'ы использовались довольно активно, после того как они стали deprecated, их можно найти буквально в нескольких местах в библиотеке.
+
+Но с view bound'ами есть определенные проблемы в смысле гибкости - например, также как и в случае обертки-декоратора, мы теряем информацию об исходном типе, не говоря уже о том, что часто нам нужно создать новый объект. Поэтому следующим шагом на пути реализации type классов стали context bounds - которые появились в Scala 2.8.0.
+
+#### Context Bound
+
+В то время как view bound'ы можно использовать с простыми, непараметрическими типами  (например, `A <% String`), context bound работает только с параметрическими типами, такими как `Ordered[A]`.
+
+Context bound базируется на implicit'ном значении - вместо implicit'ного преобразования, как в случае view bound. Параметр показывает, что для некоторого типа `A`, существует implicit'ное значение типа `B[A]`. Синтаксис метода с context bound'ами выглядит приблизительно так:
+
+{% highlight scala %}
+def f[A : B](a: A) = g(a) // g требует implicit'ного значения типа B[A]
+{% endhighlight %}
+
+A view bound `T <% V` requires the existence of an implicit conversion from `T` to `V`. A context bound has the form `T : M`, where `M` is another generic type. It requires that there is an “implicit value” of type `T[M]`. For example, class `Pair[T : Ordering]` requires that there is an implicit value of type `Ordering[T]`. That implicit value can then be used in the methods of the class. When you declare a method that uses the implicit value, you have to add an “implicit parameter.” Here is an example: 
+
+{% highlight scala %}
+class Pair[T: Ordering](val first: T, val second: T) {
+  def smaller(implicit ord: Ordering[T]) = if (ord.compare(first, second) < 0) first else second
 }
 {% endhighlight %}
 
-Метод `synchronize` приобретет немного другой вид. Здесь появляются контекстные привязки (context bounds) для `F` и `T`. Как известно, это эквивалентно объявлению implicit-параметров типа `FileLike` для наших типов `F` и `T` - `(implicit from: FileLike[F], to: FileLike[T])`. Далее, с помощью метода `Predef.implicitly` мы получаем параметры типа `FileLike`.  Теперь метод `synchronize` может работать с множеством различных типов. 
+To instantiate a generic `Array[T]`, one needs a `Manifest[T]` object. This is required for primitive type arrays to work correctly. For example, if `T` is Int, you want an `int[]` array in the virtual machine. In Scala, `Array` is a library class that doesn’t get special treatment from the compiler. If you write a generic function that constructs a generic array, you need to help it out and pass that manifest object. Since it’s an implicit parameter of the constructor, you can use a context bound, like this:
 
 {% highlight scala %}
-  def synchronize[F: FileLike, T: FileLike](from: F, to: T): Unit = {
-    val fromHelper = implicitly[FileLike[F]]
-    val toHelper = implicitly[FileLike[T]]
-
-    def synchronizeFile(file1: F, file2: T): Unit = {
-      toHelper.writeContent(file2, fromHelper.content(file1))
-    }
-
-    def synchronizeDirectory(dir1: F, dir2: T): Unit = {
-
-      def findFile(file: F, directory: T): Option[T] =
-        (for {file2 <- toHelper.children(directory)
-              if fromHelper.name(file) == toHelper.name(file2)
-        } yield file2).headOption
-
-      for (file1 <- fromHelper.children(dir1)) {
-        val file2 = findFile(file1, dir2).getOrElse(toHelper.child(dir2, fromHelper.name(file1)))
-        if (fromHelper.isDirectory(file1)) {
-          toHelper.mkdirs(file2)
-        }
-        synchronize[T, F](file1, file2)
-      }
-    }
-
-    if (fromHelper.isDirectory(from)) {
-      synchronizeDirectory(from, to)
-    } else {
-      synchronizeFile(from, to)
-    }
-  }
-{% endhighlight %}
-
-Теперь, если мы решим воспользоваться `synchronize`, например, для объектов типа `java.io.File`, 
-
-Для метода `synchronize` потребуется реализация трейта для `java.io.File`. Обычно дефолтные implicit'ные дефолтные реализации класса типов для некоторого множества типов помещают в companion-объект этого трейта.
-
-{% highlight scala %}
-import java.io.File
-object FileLike {
-  implicit val ioFileLike = new FileLike[File] {
-    override def name(file: File) =
-      file.getName()
-    override def isDirectory(file: File) =
-      file.isDirectory()
-    override def children(directory: File) =
-      directory.listFiles()
-    override def child(parent: File, name: String) =
-      new java.io.File(parent, name)
-    override def mkdirs(file: File) : Unit =
-      file.mkdirs()
-    override def content(file: File) =
-      new FileInputStream(file)
-    override def writeContent(file: File, otherContent: InputStream) = {
-      val bufferedOutput = new java.io.BufferedOutputStream(new java.io.FileOutputStream(file))
-      try {
-        val bufferedInput = new java.io.BufferedInputStream(otherContent)
-        val buffer = new Array[Byte](512)
-        var ready: Int = 0
-        ready = bufferedInput.read(buffer)
-        while (ready != -1) {
-          if (ready > 0) {
-            bufferedOutput.write(buffer, 0, ready)
-          }
-          ready = bufferedInput.read(buffer)
-        }
-      } finally {
-        otherContent.close()
-        bufferedOutput.close()
-      }
-    }
-  }
+def makePair[T: Manifest](first: T, second: T) = {
+  val r = new Array[T](2); r(0) = first; r(1) = second; r
 }
 {% endhighlight %}
 
-Реализация класса типов для `java.io.File` очень проста. Большая часть методов просто делегирует вызовы - за исключением метода `writeContent`. Теперь, если компилятору понадобится implicit'ное значение `FileLike[java.io.File]`, то оно находится в companion-объекте `FileLike`. Поскольку компилятор будет искать implicit'ные значения в companion-объекте в самую последнюю очередь, то мы можем переопределять дефолтную реализацию `Filelike[java.io.File]` с помощью импорта или определения в нужном месте. 
+If you call `makePair(4, 9)`, the compiler locates the implicit Manifest[Int] and actually calls makePair(4, 9)(intManifest). Then the method calls new Array(2)(intManifest), which returns a primitive array int[2]. Why all this complexity? In the virtual machine, generic types are erased. There is only a single makePair method that needs to work for all types T.
 
-#### Вычисление агрегатных значений для коллекции (сумма, среднее и т.д.)  
-
-Допустим, нам нужно вычислить агрегатные значения (например, среднее) на уже отсортированных коллекциях чисел. Допустим также, что нам доступно только взятие элемента по индексу и метод `reduce`. 
+Type constraints give you another way of restricting types. There are three relationships that you can use: 
 
 {% highlight scala %}
-object Statistics {
+T =:= U 
+T <:< U 
+T <%< U 
+{% endhighlight %}
 
-  def mean(xs: Vector[Double]): Double = {
-    xs.reduce(_ + _) / xs.size
-  }
+These constraints test whether `T` equals `U`, is a subtype of `U`, or is view-convertible to `U`. To use such a constraint, you add an “implicit evidence parameter” like this: 
+
+{% highlight scala %}
+class Pair[T](val first: T, val second: T)(implicit ev: T <:< Comparable[T])
+{% endhighlight %}
+
+These constraints are not built into the language. They are a feature of the Scala library.
+
+In the example above, there is no advantage to using a type constraint over a type bound class `Pair[T <: Comparable[T]]`. However, type constraints are useful in some specialized circumstances. In this section, you will see two uses of type constraints. Type constraints let you supply a method in a generic class that can be used only under certain conditions. Here is an example: 
+
+{% highlight scala %}
+class Pair[T](val first: T, val second: T) {
+  def smaller(implicit ev: T <:< Ordered[T]) = if (first < second) first else second
 }
 {% endhighlight %}
 
-В данном варианте реализация необобщенная, т.е. поддерживает только `Double`, но не, например, `Int`. Перегрузка, чреватая дублированием - явно не самый эффективный вариант. Подходящего общего предка вроде `Number` у `scala.Int` и `scala.Double`, в отличие от `java.lang.Integer` и `java.lang.Double`, нету, соответственно, такой вариант не пройдет:
+You can form a `Pair[File]`, even though `File` is not ordered. You will get an error only if you invoke the `smaller` method. Another example is the `orNull` method in the `Option` class: 
 
 {% highlight scala %}
-object Statistics {
-  def median(xs: Vector[Number]): Number = ???
-  def quartiles(xs: Vector[Number]): (Number, Number, Number) = ???
-  def iqr(xs: Vector[Number]): Number = ???
-  def mean(xs: Vector[Number]): Number = ???
+val friends = Map("Fred" -> "Barney", ...) 
+val friendOpt = friends.get("Wilma") // An Option[String] 
+val friendOrNull = friendOpt.orNull  // A String or null 
+{% endhighlight %}
+
+The `orNull` method can be useful when working with Java code where it is common to encode missing values as `null`. But it can’t be applied to value types such as `Int` that don’t have `null` as a valid value. Because `orNull` is implemented using a constraint `Null <:< A`, you can still instantiate `Option[Int]`, as long as you stay away from orNull for those instances. 
+
+Another use of type constraints is for improving type inference. Consider 
+
+{% highlight scala %}
+def firstLast[A, C <: Iterable[A]](it: C) = (it.head, it.last) 
+{% endhighlight %}
+
+When you call `firstLast(List(1, 2, 3))` you get a message that the inferred type arguments `[Nothing, List[Int]]` don’t conform to `[A, C <: Iterable[A]]`. Why `Nothing`? The type inferencer cannot figure out what `A` is from looking at `List(1, 2, 3)`, because it matches `A` and `C` in a single step. To help it along, first match `C` and then `A`: 
+
+{% highlight scala %}
+def firstLast[A, C](it: C)(implicit ev: C <:< Iterable[A]) =   (it.head, it.last)
+{% endhighlight %}
+
+
+
+A type parameter can have a *context bound* of the form `T : M`, where `M` is another generic type. It requires that there is an implicit value of type `T[M]` in scope. For example, 
+
+class Pair[T : Ordering] 
+
+requires that there is an implicit value of type Ordering[T]. That implicit value can then be used in the methods of the class. Consider this example: 
+
+class Pair[T : Ordering](val first: T, val second: T) {   def smaller(implicit ord: Ordering[T]) =     if (ord.compare(first, second) < 0) first else second } 
+
+If we form a new Pair(40, 2), then the compiler infers that we want a Pair[Int]. Since there is an implicit value of type Ordering[Int] in the Predef scope, Int fulfills the context bound. That ordering becomes a field of the class, and it is passed to the methods that need it. If you prefer, you can retrieve the ordering with the implicitly method in the Predef class: class Pair[T : Ordering](val first: T, val second: T) {   def smaller =     if (implicitly[Ordering[T]].compare(first, second) < 0) first else second } The implicitly function is defined as follows in Predef.scala: def implicitly[T](implicit e: T) = e   // For summoning implicit values from the nether world Note The comment is apt—the implicit objects live in the “nether world” and are invisibly added to methods. Alternatively, you can take advantage of the fact that the Ordered trait defines an implicit conversion from Ordering to Ordered. If you import that conversion, you can use relational operators: class Pair[T : Ordering](val first: T, val second: T) {   def smaller = {     import Ordered._;     if (first < second) first else second   } } These are just minor variations; the important point is that you can instantiate Pair[T] whenever there is an implicit value of type Ordering[T]. For example, if you want a Pair[Point], arrange for an implicit Ordering[Point] value: implicit object PointOrdering extends Ordering[Point] {   def compare(a: Point, b: Point) = ... }
+
+
+
+
+
+
+
+Конечно, в случае context bound'ов, в отличие от view bound'ов, не сразу понятно, как их использовать. Типичный пример из стандартной библиотеки, не связанный с type class'ами:
+
+{% highlight scala %}
+object Array {
+//...
+  def ofDim[T: ClassManifest](n1: Int): Array[T] =
+    new Array[T](n1)
+//...
 }
 {% endhighlight %}
 
-Но даже если бы это было возможно, мы бы все равно теряли бы информацию о типе.
+Инициализация массивов Array initialization on a parameterized type requires a ClassManifest to be available, for arcane reasons related to type erasure and the non-erasure nature of arrays.
 
-Можно дать следующее определение классам типов - класс типов `C` определяет некоторое поведение, которое должен поддерживать тип `T` для того, чтобы принадлежать к классу типов `C`. Связь в виде наследования для типов `T` и `C` не нужна, `T` вообще ничего не знает о `C`. Для того, чтобы сделать некоторый тип членом класса типов, нам нужно предоставить операции, которые должен поддерживать тип `T`. После этого функции, у которых один или более параметров ограничены типом `C`, могут вызываться с аргументами типа `T`.
+Another very common example in the library is a bit more complex:
 
-Т.е. мы добавляем поведение, при этом не оборачивая исходные типы в специально созданные для этого адаптеры.
+def f[A : Ordering](a: A, b: A) = implicitly[Ordering[A]].compare(a, b)
 
-Создадим класс типов `NumberLike`.
-
-{% highlight scala %}
-object Math {
-  trait NumberLike[T] {
-    def plus(x: T, y: T): T
-    def divide(x: T, y: Int): T
-    def minus(x: T, y: T): T
-  }
-}
-{% endhighlight %}
-
-Как и в предыдущем случае (с `FileLike`), класс типов принимает один или более параметров, и не имеет состояния, т.е. его методы оперируют над параметрами типа `T`. Теперь мы создаем дефолтные реализации - для `Int` и `Double`.
-
-{% highlight scala %}
-object Math {
-...
- object NumberLike {
-    implicit object NumberLikeDouble extends NumberLike[Double] {
-      def plus(x: Double, y: Double): Double = x + y
-      def divide(x: Double, y: Int): Double = x / y
-      def minus(x: Double, y: Double): Double = x - y
-    }
-    implicit object NumberLikeInt extends NumberLike[Int] {
-      def plus(x: Int, y: Int): Int = x + y
-      def divide(x: Int, y: Int): Int = x / y
-      def minus(x: Int, y: Int): Int = x - y
-    }
-  }
-
-}
-{% endhighlight %}
-
-В данном случае, обе реализации практически идентичны, на самом деле это только здесь - в случае с `FileLike`, реализации для `File` и `URL` были бы совершенно разными. Теперь собственно вызов:
-
-{% highlight scala %}
-object Statistics {
-  import Math.NumberLike
-  def mean[T](xs: Vector[T])(implicit ev: NumberLike[T]): T =
-    ev.divide(xs.reduce(ev.plus(_, _)), xs.size)
-}
-{% endhighlight %}
-
-Метод принимает параметр типа `T` и аргумент `Vector[T]`. Идея здесь в том, чтобы ограничить параметр таким образом, чтобы метод принимал только типы определенного класса типов - что реализуется с помощью implicit'ного списка параметров. Т.е. необходимо, чтобы значение типа `NumberLike[T]` было доступно в данном контексте. 
-
-#### Контекстные привязки (Context bounds)
-
-Ну и конечно, здесь снова стоит применить контекстные привязки вместо списка implicit'ных параметров.
-
-{% highlight scala %}
-object Statistics {
-  import Math.NumberLike
-
-  def mean[T: NumberLike](xs: Vector[T]): T = {
-    val ev = implicitly[NumberLike[T]]
-    implicitly[NumberLike[T]].divide(xs.reduce(ev.plus(_, _)), xs.size)
-  }
-}
-{% endhighlight %}
-
-Контекстная привязка `T : NumberLike` означает, что implicit'ное значение типа `NumberLike[T]` должно быть доступно в текущем контексте, и на самом деле эквивалентна списку implicit'ных параметров типа `NumberLike[T]`. Для того, чтобы получить доступ к implicit'ному значению, нужно воспользоваться методом `Predef.implicitly`. Правда, воспользоваться контекстными привязками можно только если класс типов требует не более 1-го параметра типа.
-
-#### Преимущества type-классов
-
-1. Разделение абстракций - мы модифицируем только специально созданные для этого классы типов, и нам не нужно менять уже существующие типы.
-2. Возможность композиции - с помощью context bounds мы можем указать и поддерживать несколько типов одновременно.
-3. Возможность переопределения - классы типов позволяют переопределять дефолтные реализации класса типов путем использования implicit'ов.
-
+Here, implicitly is used to retrive the implicit value we want, one of type Ordering[A], which class defines the method compare(a: A, b: A): Int.
 
