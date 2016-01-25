@@ -73,13 +73,13 @@ def f[A <% B](a: A) = a.bMethod
 
 В то время как view bound'ы можно использовать с простыми, непараметрическими типами  (например, `A <% String`), context bound работает только с параметрическими типами, такими как `Ordered[A]`.
 
-Context bound базируется на implicit'ном значении - вместо implicit'ного преобразования, как в случае view bound. Параметр показывает, что для некоторого типа `A`, существует implicit'ное значение типа `B[A]`. Синтаксис метода с context bound'ами выглядит приблизительно так:
+Context bound базируется на implicit'ном значении - вместо implicit'ного преобразования, как в случае view bound. Параметр показывает, что для некоторого типа `A`, существует implicit'ное значение (implicit value) типа `B[A]`. Синтаксис метода с context bound'ами выглядит приблизительно так:
 
 {% highlight scala %}
 def f[A : B](a: A) = g(a) // g требует implicit'ного значения типа B[A]
 {% endhighlight %}
 
-A view bound `T <% V` requires the existence of an implicit conversion from `T` to `V`. A context bound has the form `T : M`, where `M` is another generic type. It requires that there is an “implicit value” of type `T[M]`. For example, class `Pair[T : Ordering]` requires that there is an implicit value of type `Ordering[T]`. That implicit value can then be used in the methods of the class. When you declare a method that uses the implicit value, you have to add an “implicit parameter.” Here is an example: 
+View bound вида `T <% V` требует существования  implicit'ного преобразования conversion из `T` в `V`. Сontext bound же имеет вид `T : M`, где `M` - другой параметрический тип, и требует наличия implicit-ного значения типа `T[M]`. Например, `class Pair[T : Ordering]` требует implicit-ного значения `Ordering[T]`, которое затем может быть использовано внутри метода; тот факт, что нам нужно implicit'ное значение, объявляется с помощью implicit'ного параметра:
 
 {% highlight scala %}
 class Pair[T: Ordering](val first: T, val second: T) {
@@ -87,7 +87,7 @@ class Pair[T: Ordering](val first: T, val second: T) {
 }
 {% endhighlight %}
 
-To instantiate a generic `Array[T]`, one needs a `Manifest[T]` object. This is required for primitive type arrays to work correctly. For example, if `T` is Int, you want an `int[]` array in the virtual machine. In Scala, `Array` is a library class that doesn’t get special treatment from the compiler. If you write a generic function that constructs a generic array, you need to help it out and pass that manifest object. Since it’s an implicit parameter of the constructor, you can use a context bound, like this:
+Для того, чтобы создать значение типа `Array[T]`, нам понадобится `Manifest[T]`. это необходимо из-за особенностей массивов. Например, если `T`  - это `Int`, то мы хотели бы в конце концов получить массив типа `int[]`. В Scala, `Array`  - такой же библиотечный класс, как и все остальные, и не обрабатывается как-то особенно компилятором. If you write a generic function that constructs a generic array, you need to help it out and pass that manifest object. Since it’s an implicit parameter of the constructor, you can use a context bound, like this:
 
 {% highlight scala %}
 def makePair[T: Manifest](first: T, second: T) = {
@@ -95,7 +95,7 @@ def makePair[T: Manifest](first: T, second: T) = {
 }
 {% endhighlight %}
 
-If you call `makePair(4, 9)`, the compiler locates the implicit Manifest[Int] and actually calls makePair(4, 9)(intManifest). Then the method calls new Array(2)(intManifest), which returns a primitive array int[2]. Why all this complexity? In the virtual machine, generic types are erased. There is only a single makePair method that needs to work for all types T.
+If you call `makePair(4, 9)`, the compiler locates the implicit `Manifest[Int]` and actually calls `makePair(4, 9)(intManifest)`. Then the method calls `new Array(2)(intManifest)`, which returns a primitive array `int[2]`. Why all this complexity? In the virtual machine, generic types are erased. There is only a single `makePair` method that needs to work for all types `T`.
 
 Type constraints give you another way of restricting types. There are three relationships that you can use: 
 
@@ -140,7 +140,7 @@ def firstLast[A, C <: Iterable[A]](it: C) = (it.head, it.last)
 When you call `firstLast(List(1, 2, 3))` you get a message that the inferred type arguments `[Nothing, List[Int]]` don’t conform to `[A, C <: Iterable[A]]`. Why `Nothing`? The type inferencer cannot figure out what `A` is from looking at `List(1, 2, 3)`, because it matches `A` and `C` in a single step. To help it along, first match `C` and then `A`: 
 
 {% highlight scala %}
-def firstLast[A, C](it: C)(implicit ev: C <:< Iterable[A]) =   (it.head, it.last)
+def firstLast[A, C](it: C)(implicit ev: C <:< Iterable[A]) = (it.head, it.last)
 {% endhighlight %}
 
 A type parameter can have a *context bound* of the form `T : M`, where `M` is another generic type. It requires that there is an implicit value of type `T[M]` in scope. For example, 
@@ -159,20 +159,82 @@ class Pair[T: Ordering](val first: T, val second: T) {
 
 If we form a new `Pair(40, 2)`, then the compiler infers that we want a `Pair[Int]`. Since there is an implicit value of type `Ordering[Int]` in the `Predef` scope, `Int` fulfills the context bound. That ordering becomes a field of the class, and it is passed to the methods that need it. If you prefer, you can retrieve the ordering with the implicitly method in the `Predef` class: 
 
+{% highlight scala %}
 class Pair[T: Ordering](val first: T, val second: T) {
   def smaller = if (implicitly[Ordering[T]].compare(first, second) < 0) first else second
 }
+{% endhighlight %}
 
 The implicitly function is defined as follows in `Predef.scala`: 
 
+{% highlight scala %}
 def implicitly[T](implicit e: T) = e   
 // For summoning implicit values from the nether world 
+{% endhighlight %}
 
 Note: The comment is apt—the implicit objects live in the “nether world” and are invisibly added to methods. 
 
-Alternatively, you can take advantage of the fact that the `Ordered` trait defines an implicit conversion from `Ordering` to `Ordered`. If you import that conversion, you can use relational operators: class Pair[T : Ordering](val first: T, val second: T) {   def smaller = {     import Ordered._;     if (first < second) first else second   } } These are just minor variations; the important point is that you can instantiate Pair[T] whenever there is an implicit value of type Ordering[T]. For example, if you want a Pair[Point], arrange for an implicit Ordering[Point] value: implicit object PointOrdering extends Ordering[Point] {   def compare(a: Point, b: Point) = ... }
+Alternatively, you can take advantage of the fact that the `Ordered` trait defines an implicit conversion from `Ordering` to `Ordered`. If you import that conversion, you can use relational operators: 
 
+{% highlight scala %}
+class Pair[T: Ordering](val first: T, val second: T) {
+  def smaller = {
+    import Ordered._; if (first < second) first else second
+  }
+}
+{% endhighlight %}
 
+These are just minor variations; the important point is that you can instantiate `Pair[T]` whenever there is an implicit value of type `Ordering[T]`. For example, if you want a `Pair[Point]`, arrange for an implicit `Ordering[Point]` value: 
+
+{% highlight scala %}
+implicit object PointOrdering extends Ordering[Point] {
+  def compare(a: Point, b: Point) = ...
+}
+{% endhighlight %}
+
+#### Evidence 
+The type constraints:
+
+{% highlight scala %}
+T =:= U 
+T <:< U 
+T <%< U 
+{% endhighlight %}
+
+test whether `T` equals `U`, is a subtype of `U`, or is view-convertible to `U`. To use such a type constraint, you supply an implicit parameter, such as 
+
+{% highlight scala %}
+def firstLast[A, C](it: C)(implicit ev: C <:< Iterable[A]) =   
+  (it.head, it.last) 
+{% endhighlight %}
+
+The `=:=`, `<:<`, and `<%<` are classes with implicit values, defined in the `Predef` object. For example, `<:<` is essentially: 
+
+{% highlight scala %}
+abstract class <:<[-From, +To] extends Function1[From, To]
+
+object <:< {
+  implicit def conforms[A] = new (A <:< A) {
+    def apply(x: A) = x
+  }
+}
+{% endhighlight %}
+
+Suppose the compiler processes a constraint `implicit ev: String <:< AnyRef`. It looks in the companion object for an implicit object of type `String <:< AnyRef`. Note that `<:<` is contravariant in `From` and covariant in `To`. Therefore the object 
+
+{% highlight scala %}
+<:<.conforms[String] 
+{% endhighlight %}
+
+is usable as a `String <:< AnyRef` instance. (The `<:<.conforms[AnyRef]` object is also usable, but it is less specific and therefore not considered.)
+
+We call `ev` an "evidence object" — its existence is evidence of the fact that, in this case, `String` is a subtype of `AnyRef`. Here, the evidence object is the identity function. To see why the identity function is required, have a closer look at 
+
+{% highlight scala %}
+def firstLast[A, C](it: C)(implicit ev: C <:< Iterable[A]) = (it.head, it.last) 
+{% endhighlight %}
+
+The compiler doesn’t actually know that `C` is an `Iterable[A]` — recall that `<:<` is not a feature of the language, but just a class. So, the calls `it.head` and `it.last` are not valid. But `ev` is a function with one parameter, and therefore an implicit conversion from `C` to `Iterable[A]`. The compiler applies it, computing `ev(it).head` and `ev(it).last`.
 
 Конечно, в случае context bound'ов, в отличие от view bound'ов, не сразу понятно, как их использовать. Типичный пример из стандартной библиотеки, не связанный с type class'ами:
 
@@ -189,7 +251,9 @@ object Array {
 
 Another very common example in the library is a bit more complex:
 
+{% highlight scala %}
 def f[A : Ordering](a: A, b: A) = implicitly[Ordering[A]].compare(a, b)
+{% endhighlight %}
 
-Here, implicitly is used to retrive the implicit value we want, one of type Ordering[A], which class defines the method compare(a: A, b: A): Int.
+Here, implicitly is used to retrive the implicit value we want, one of type `Ordering[A]`, which class defines the method `compare(a: A, b: A): Int`.
 
