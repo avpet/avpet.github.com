@@ -143,21 +143,34 @@ When you call `firstLast(List(1, 2, 3))` you get a message that the inferred typ
 def firstLast[A, C](it: C)(implicit ev: C <:< Iterable[A]) =   (it.head, it.last)
 {% endhighlight %}
 
-
-
 A type parameter can have a *context bound* of the form `T : M`, where `M` is another generic type. It requires that there is an implicit value of type `T[M]` in scope. For example, 
 
+{% highlight scala %}
 class Pair[T : Ordering] 
+{% endhighlight %}
 
-requires that there is an implicit value of type Ordering[T]. That implicit value can then be used in the methods of the class. Consider this example: 
+requires that there is an implicit value of type `Ordering[T]`. That implicit value can then be used in the methods of the class. Consider this example: 
 
-class Pair[T : Ordering](val first: T, val second: T) {   def smaller(implicit ord: Ordering[T]) =     if (ord.compare(first, second) < 0) first else second } 
+{% highlight scala %}
+class Pair[T: Ordering](val first: T, val second: T) {
+  def smaller(implicit ord: Ordering[T]) = if (ord.compare(first, second) < 0) first else second
+}
+{% endhighlight %}
 
-If we form a new Pair(40, 2), then the compiler infers that we want a Pair[Int]. Since there is an implicit value of type Ordering[Int] in the Predef scope, Int fulfills the context bound. That ordering becomes a field of the class, and it is passed to the methods that need it. If you prefer, you can retrieve the ordering with the implicitly method in the Predef class: class Pair[T : Ordering](val first: T, val second: T) {   def smaller =     if (implicitly[Ordering[T]].compare(first, second) < 0) first else second } The implicitly function is defined as follows in Predef.scala: def implicitly[T](implicit e: T) = e   // For summoning implicit values from the nether world Note The comment is apt—the implicit objects live in the “nether world” and are invisibly added to methods. Alternatively, you can take advantage of the fact that the Ordered trait defines an implicit conversion from Ordering to Ordered. If you import that conversion, you can use relational operators: class Pair[T : Ordering](val first: T, val second: T) {   def smaller = {     import Ordered._;     if (first < second) first else second   } } These are just minor variations; the important point is that you can instantiate Pair[T] whenever there is an implicit value of type Ordering[T]. For example, if you want a Pair[Point], arrange for an implicit Ordering[Point] value: implicit object PointOrdering extends Ordering[Point] {   def compare(a: Point, b: Point) = ... }
+If we form a new `Pair(40, 2)`, then the compiler infers that we want a `Pair[Int]`. Since there is an implicit value of type `Ordering[Int]` in the `Predef` scope, `Int` fulfills the context bound. That ordering becomes a field of the class, and it is passed to the methods that need it. If you prefer, you can retrieve the ordering with the implicitly method in the `Predef` class: 
 
+class Pair[T: Ordering](val first: T, val second: T) {
+  def smaller = if (implicitly[Ordering[T]].compare(first, second) < 0) first else second
+}
 
+The implicitly function is defined as follows in `Predef.scala`: 
 
+def implicitly[T](implicit e: T) = e   
+// For summoning implicit values from the nether world 
 
+Note: The comment is apt—the implicit objects live in the “nether world” and are invisibly added to methods. 
+
+Alternatively, you can take advantage of the fact that the `Ordered` trait defines an implicit conversion from `Ordering` to `Ordered`. If you import that conversion, you can use relational operators: class Pair[T : Ordering](val first: T, val second: T) {   def smaller = {     import Ordered._;     if (first < second) first else second   } } These are just minor variations; the important point is that you can instantiate Pair[T] whenever there is an implicit value of type Ordering[T]. For example, if you want a Pair[Point], arrange for an implicit Ordering[Point] value: implicit object PointOrdering extends Ordering[Point] {   def compare(a: Point, b: Point) = ... }
 
 
 
