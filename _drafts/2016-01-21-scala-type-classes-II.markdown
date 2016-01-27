@@ -87,7 +87,7 @@ class Pair[T: Ordering](val first: T, val second: T) {
 }
 {% endhighlight %}
 
-Для того, чтобы создать значение типа `Array[T]`, нам понадобится `Manifest[T]`. это необходимо из-за особенностей массивов. Например, если `T`  - это `Int`, то мы хотели бы в конце концов получить массив типа `int[]`. В Scala, `Array`  - такой же библиотечный класс, как и все остальные, и не обрабатывается как-то особенно компилятором. If you write a generic function that constructs a generic array, you need to help it out and pass that manifest object. Since it’s an implicit parameter of the constructor, you can use a context bound, like this:
+Для того, чтобы создать значение типа `Array[T]`, нам понадобится `Manifest[T]`. это необходимо из-за особенностей массивов в JVM (type erasure). Например, если `T`  - это `Int`, то мы хотели бы в конце концов получить массив типа `int[]`. 
 
 {% highlight scala %}
 def makePair[T: Manifest](first: T, second: T) = {
@@ -95,17 +95,17 @@ def makePair[T: Manifest](first: T, second: T) = {
 }
 {% endhighlight %}
 
-If you call `makePair(4, 9)`, the compiler locates the implicit `Manifest[Int]` and actually calls `makePair(4, 9)(intManifest)`. Then the method calls `new Array(2)(intManifest)`, which returns a primitive array `int[2]`. Why all this complexity? In the virtual machine, generic types are erased. There is only a single `makePair` method that needs to work for all types `T`.
+Для вызова `makePair(4, 9)`, компилятор должен найти implicit'ный объект `Manifest[Int]`, т.е. полный вызов выглядит как `makePair(4, 9)(intManifest)`.
 
-Type constraints give you another way of restricting types. There are three relationships that you can use: 
+Type constraints дают нам дополнительные возможности для наложения ограничений на типы. Существуют 3 типа ограничений: 
 
 {% highlight scala %}
-T =:= U 
-T <:< U 
-T <%< U 
+T =:= U // тип `T` совпадает с `U`
+T <:< U // тип `T` является подтипом `U`
+T <%< U // для типа `T` должна присутствовать imlicit'ная конвертация в тип `U` 
 {% endhighlight %}
 
-These constraints test whether `T` equals `U`, is a subtype of `U`, or is view-convertible to `U`. To use such a constraint, you add an “implicit evidence parameter” like this: 
+To use such a constraint, you add an “implicit evidence parameter” like this: 
 
 {% highlight scala %}
 class Pair[T](val first: T, val second: T)(implicit ev: T <:< Comparable[T])
