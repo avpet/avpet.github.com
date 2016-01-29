@@ -10,7 +10,7 @@ image: http://imageshack.com/a/img905/4510/8e7vkO.png
 
 * [http://www.horstmann.com/scala/index.html](http://www.horstmann.com/scala/index.html)
 * [http://docs.scala-lang.org/tutorials/FAQ/context-and-view-bounds.html](http://docs.scala-lang.org/tutorials/FAQ/context-and-view-bounds.html)
-* [http://like-a-boss.net/2012/07/30/ordering-and-ordered-in-scala.html](http://like-a-boss.net/2012/07/30/ordering-and-ordered-in-scala.html)
+* [http://jatinpuri.com/2014/03/replace-view-bounds/](http://jatinpuri.com/2014/03/replace-view-bounds/)
 
 Что такое вообще context bound'ы и их предшественники - view bound'ы? Немного предыстории type class'ов.
 
