@@ -6,12 +6,6 @@ categories: scala
 image: http://imageshack.com/a/img905/4510/8e7vkO.png
 ---
 
-Источники:
-
-* [http://www.horstmann.com/scala/index.html](http://www.horstmann.com/scala/index.html)
-* [http://docs.scala-lang.org/tutorials/FAQ/context-and-view-bounds.html](http://docs.scala-lang.org/tutorials/FAQ/context-and-view-bounds.html)
-* [http://jatinpuri.com/2014/03/replace-view-bounds/](http://jatinpuri.com/2014/03/replace-view-bounds/)
-
 Что такое вообще context bound'ы и их предшественники - view bound'ы? Немного предыстории type class'ов.
 
 И тот и другой были попыткой достичь в той или иной степени эффекта type class'ов, которые уже существовали в Haskell. Сперва появились в Scala появились т.н. view (см. [спецификацию Scala, раздел 7.3](http://www.scala-lang.org/files/archive/spec/2.11/07-implicit-parameters-and-views.html#views)) - т.е. implicit'ные преобразования (conversion). На базе implicit'ных параметров и методов можно построить implicit'ные преобразования, или views. Такое преобразование из типа `S` в тип `T` определяется implicit'ным же значением, имеющим тип функции вида `S=>T` или `(=>S)=>T`. 
@@ -288,4 +282,10 @@ implicit def convertToInt[T](n:T): Int = n match {
 
 def foo[T : L](x: T):Int = x
 {% endhighlight %}
+
+Источники:
+
+* [http://www.horstmann.com/scala/index.html](http://www.horstmann.com/scala/index.html)
+* [http://docs.scala-lang.org/tutorials/FAQ/context-and-view-bounds.html](http://docs.scala-lang.org/tutorials/FAQ/context-and-view-bounds.html)
+* [http://jatinpuri.com/2014/03/replace-view-bounds/](http://jatinpuri.com/2014/03/replace-view-bounds/)
 
