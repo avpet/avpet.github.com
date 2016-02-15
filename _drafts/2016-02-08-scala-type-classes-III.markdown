@@ -1,14 +1,25 @@
 ---
 layout: post
-title:  "Классы типов - III: пример использования в JSON парсерах"
-date:   2016-02-08 11:30:00
+title:  "Классы типов - III: пример использования в сериализации в JSON"
+date:   2016-02-15 11:30:00
 categories: scala
 image: http://imageshack.com/a/img905/4510/8e7vkO.png
 ---
 
-They are a way of adding behavior to standard data classes (like case class domain objects and collections, for example) without needing to alter those classes directly, instead implicitly (in Scala at least) providing definitions of a type class for the type you want to add the behavior to. This is sometimes called ad-hoc polymorphism and more detail on the theory can be found on wikipedia.
+http://debasishg.blogspot.com/2010/07/sjson-now-offers-type-class-based-json.html
+https://github.com/debasishg/sjson/wiki/Examples-of-Type-Class-based-JSON-serialization
+http://debasishg.blogspot.com/2010/07/refactoring-into-scala-type-classes.html
+https://github.com/spray/spray-json
 
-There are many good libraries already available for Scala that take advantage of type classes for this kind of usage. For example, the Play Framework's own JSON support makes use of type classes like Format, Reads and Writes to make it easy to convert to and from JSON. The real advantage of type-classes over more traditional approaches to this problem like reflection is that more issues (like missing conversions, for example) can be detected by the compiler rather than just resulting in errors at runtime. 
+
+API для сериализации традиционно строится или с помощью reflection'а (и вспомогательных аннотаций), или с помощью наследования абстрактных интерфейсов, описывающих протокол сериализации. Преимуществом reflection'а является простота использования с точки зрения клиента - хотя с точки зрения внутренней реализации простой ее уже не назовешь.
+
+Также очевидно, что трансформация не всегда происходит "один в один", даже просто из-за того, что есть разница систем типов между JSON и Scala, и из-за type erasure в JVM. Протокол сериализации можно описать с помощью реализации специально созданных для этого абстрактных интерфейсов, но этот вариант застваляет, например, связывать доменные классы с деталями JSON-сериализации. С помощью классов типов же можно вынести артефакты, связанные с сериализацией, в отдельную абстракцию, не связанный непосредственно с основным классом. Таким образом, клиентский код становится чище. Еще одним достоинством классов типов в этом случае является 
+
+Классами типов пользуется на сегодняшний день уже немалое количество библиотек - например, Play JSON базируется на классах типов `Format`, `Reads` и `Writes`. The real advantage of type-classes over more traditional approaches to this problem like reflection is that more issues (like missing conversions, for example) can be detected by the compiler rather than just resulting in errors at runtime. 
+
+Type classes allow you to model orthogonal concerns of an abstraction without hardwiring it within the abstraction itself. This takes the bloat away from the core abstraction implementation into separate independent class structures. Very recently I refactored Akka actor serialization and gained some real insights into the benefits of using type classes. This post is a field report of the same.
+
 
 
 Что такое вообще context bound'ы и их предшественники - view bound'ы? Немного предыстории type class'ов.
